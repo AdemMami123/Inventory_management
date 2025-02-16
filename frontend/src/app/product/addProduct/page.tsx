@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,9 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "react-hot-toast"; 
 
-// Define TypeScript interface for form data
 interface ProductFormData {
   name: string;
   sku: string;
@@ -23,10 +23,10 @@ interface ProductFormData {
 
 export default function AddProductForm() {
   const { control, register, handleSubmit, reset } = useForm<ProductFormData>();
-  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const router = useRouter();
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -47,7 +47,7 @@ export default function AddProductForm() {
     formData.append("quantity", data.quantity.toString());
     formData.append("price", data.price.toString());
     formData.append("description", data.description);
-    
+
     if (data.image && data.image.length > 0) {
       formData.append("image", data.image[0]);
     }
@@ -63,20 +63,18 @@ export default function AddProductForm() {
         throw new Error("Failed to add product");
       }
 
-      toast({
-        title: "Product added successfully!",
-        description: `${data.name} was created.`,
-        variant: "success",
-      });
-
       reset();
       setPreviewImage(null);
+
+      
+      router.push("/product/viewProducts");
+
+      
+      setTimeout(() => {
+        toast.success(`${data.name} was added successfully!`);
+      }, 500); // Delay of 500ms before showing toast
     } catch (error) {
-      toast({
-        title: "Error",
-        description: (error as Error).message,
-        variant: "destructive",
-      });
+      toast.error((error as Error).message);
     } finally {
       setLoading(false);
     }
@@ -138,7 +136,6 @@ export default function AddProductForm() {
             <Textarea id="description" {...register("description", { required: true })} placeholder="Enter product description" />
           </div>
 
-          {/* Image Upload */}
           <div>
             <Label htmlFor="image">Product Image</Label>
             <Input
@@ -150,7 +147,6 @@ export default function AddProductForm() {
             />
           </div>
 
-          {/* Image Preview Popup */}
           {isModalOpen && previewImage && (
             <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
               <div className="bg-white p-4 rounded-lg shadow-lg max-w-md">
