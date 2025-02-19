@@ -13,46 +13,50 @@ const generateToken = (id) => {
     expiresIn: "1d",
   });
 };
-//register user
-const registerUser = asyncHandler(async (req, res) => {
-  const { name, email, password } = req.body;
 
-  //validation
+// Register User
+const registerUser = asyncHandler(async (req, res) => {
+  const { name, email, password, role } = req.body;
+
+  // Validation
   if (!name || !email || !password) {
     res.status(400);
     throw new Error("Please fill all the fields");
   }
   if (password.length < 6) {
     res.status(400);
-    throw new Error("Password must be atleast 6 characters long");
+    throw new Error("Password must be at least 6 characters long");
   }
-  //chekc if user email already exists
+
+  // Check if user email already exists
   const userExists = await User.findOne({ email });
   if (userExists) {
     res.status(400);
     throw new Error("User already exists");
   }
 
-  //create user
+  // Create user
   const user = await User.create({
     name,
     email,
     password,
+    role: role || "employee", 
   });
 
-  //generate token for user
+  // Generate token for user
   const token = generateToken(user._id);
-  //send http-only cookie
+
+  // Send HTTP-only cookie
   res.cookie("token", token, {
     path: "/",
     httpOnly: true,
-    expires: new Date(Date.now() + 1000 * 86400), //1day
+    expires: new Date(Date.now() + 1000 * 86400), // 1 day
     sameSite: "none",
     secure: true,
   });
 
   if (user) {
-    const { _id, name, email, photo, phone, bio } = user;
+    const { _id, name, email, photo, phone, bio, role } = user;
     res.status(201).json({
       _id,
       name,
@@ -60,6 +64,7 @@ const registerUser = asyncHandler(async (req, res) => {
       photo,
       phone,
       bio,
+      role,
       token,
     });
   } else {
@@ -67,37 +72,41 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new Error("Invalid user data");
   }
 });
-/********************************************************/
-//login user
+
+// Login User
 const loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
-  //validation
+
+  // Validation
   if (!email || !password) {
     res.status(400);
     throw new Error("Please fill all the fields");
   }
-  //check if user exists
+
+  // Check if user exists
   const user = await User.findOne({ email });
   if (!user) {
     res.status(401);
     throw new Error("Invalid credentials");
   }
-  //check if password matches
+
+  // Check if password matches
   const passwordIsCorrect = await bcrypt.compare(password, user.password);
 
-  //generate token for user
+  // Generate token for user
   const token = generateToken(user._id);
-  //send http-only cookie
+
+  // Send HTTP-only cookie
   res.cookie("token", token, {
     path: "/",
     httpOnly: true,
-    expires: new Date(Date.now() + 1000 * 86400), //1day
+    expires: new Date(Date.now() + 1000 * 86400), // 1 day
     sameSite: "none",
     secure: true,
   });
 
   if (user && passwordIsCorrect) {
-    const { _id, name, email, photo, phone, bio } = user;
+    const { _id, name, email, photo, phone, bio, role } = user;
     res.status(200).json({
       _id,
       name,
@@ -105,6 +114,7 @@ const loginUser = asyncHandler(async (req, res) => {
       photo,
       phone,
       bio,
+      role,
       token,
     });
   } else {
@@ -113,23 +123,23 @@ const loginUser = asyncHandler(async (req, res) => {
   }
 });
 
-//logout user
+// Logout User
 const logoutUser = asyncHandler(async (req, res) => {
   res.cookie("token", "", {
     path: "/",
     httpOnly: true,
-    expires: new Date(0), 
+    expires: new Date(0),
     sameSite: "none",
     secure: true,
   });
   res.status(200).json({ message: "Logged out successfully" });
 });
 
-//get user data
+// Get User Data
 const getUser = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id).select("-password");
   if (user) {
-    const { _id, name, email, photo, phone, bio } = user;
+    const { _id, name, email, photo, phone, bio, role } = user;
     res.status(200).json({
       _id,
       name,
@@ -137,13 +147,15 @@ const getUser = asyncHandler(async (req, res) => {
       photo,
       phone,
       bio,
+      role,
     });
   } else {
     res.status(404);
     throw new Error("User not found");
   }
 });
-//get login status
+
+// Get Login Status
 const loginStatus = asyncHandler(async (req, res) => {
   const token = req.cookies.token;
   if (!token) {
@@ -155,16 +167,18 @@ const loginStatus = asyncHandler(async (req, res) => {
   }
   return res.json(false);
 });
-//update user
+
+// Update User
 const updateUser = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
   if (user) {
-    const { name, email, photo, phone, bio } = user;
+    const { name, email, photo, phone, bio, role } = user;
     user.email = email;
     user.name = req.body.name || name;
     user.photo = req.body.photo || photo;
     user.phone = req.body.phone || phone;
     user.bio = req.body.bio || bio;
+    user.role = req.body.role || role; // Update role if provided
 
     const updatedUser = await user.save();
     res.status(200).json({
@@ -174,30 +188,35 @@ const updateUser = asyncHandler(async (req, res) => {
       photo: updatedUser.photo,
       phone: updatedUser.phone,
       bio: updatedUser.bio,
+      role: updatedUser.role,
     });
   } else {
     res.status(404);
-    throw new Error("User not  found");
+    throw new Error("User not found");
   }
 });
-//change password
+
+// Change Password
 const changePassword = asyncHandler(async (req, res) => {
-  //get user from db
   const user = await User.findById(req.user._id);
   const { oldPassword, password } = req.body;
-  //check if user exists
+
+  // Check if user exists
   if (!user) {
     res.status(400);
-    throw new Error("user not found , please login again");
+    throw new Error("User not found, please login again");
   }
-  //validate
+
+  // Validate
   if (!oldPassword || !password) {
     res.status(400);
     throw new Error("Please add old and new password");
   }
-  //check if old password matches
+
+  // Check if old password matches
   const passwordIsCorrect = await bcrypt.compare(oldPassword, user.password);
-  //save new password
+
+  // Save new password
   if (user && passwordIsCorrect) {
     user.password = password;
     await user.save();
@@ -207,53 +226,65 @@ const changePassword = asyncHandler(async (req, res) => {
     throw new Error("Invalid password");
   }
 });
-//forgot password
+
+// Forgot Password
 const forgotPassword = asyncHandler(async (req, res) => {
   const { email } = req.body;
-  //check if user exists
-  const user = await User.findOne({
-    email,
-  });
+
+  // Check if user exists
+  const user = await User.findOne({ email });
   if (!user) {
     res.status(404);
     throw new Error("User not found");
   }
-  //create reset token
-  let resetToken = crypto.randomBytes(32).toString("hex")+ user._id;
-  //hash token before saving to DB
+
+  // Create reset token
+  let resetToken = crypto.randomBytes(32).toString("hex") + user._id;
+
+  // Hash token before saving to DB
   const hashedToken = crypto
     .createHash("sha256")
     .update(resetToken)
     .digest("hex");
-//save toekn to db
-await new Token({
-  userId: user._id,
-  token: hashedToken,
-  createdAt: Date.now(),
-  expiresAt: Date.now() + 30 * (60 * 1000), //30mins
-}).save();
-//construct reset url
-const resetUrl='$(process.env.FRONTEND_URL)/resetpassword/${resetToken}';
-//reset Email
-const message=`<h2>Hello ${user.name}</h2>
-<p>please user the url to reset your password</p>
-<p>this reset url is valid for only 30 mins</p>
-<a href="${resetUrl}clicktracking=off">${resetUrl}</a>
-<p>Regarrds</p>
-`
-const subject='Reset your password'
-const send_to=user.email;
-const sent_from=process.env.EMAIL_USER;
-try {
-  await sendEmail(subject,message,send_to,sent_from);
-  res.status(200).json({success:true,message:'Email sent'});
-  
-} catch (error) {
 
+  // Save token to DB
+  await new Token({
+    userId: user._id,
+    token: hashedToken,
+    createdAt: Date.now(),
+    expiresAt: Date.now() + 30 * (60 * 1000), // 30 minutes
+  }).save();
+
+  // Construct reset URL
+  const resetUrl = `${process.env.FRONTEND_URL}/resetpassword/${resetToken}`;
+
+  // Reset Email
+  const message = `<h2>Hello ${user.name}</h2>
+    <p>Please use the URL below to reset your password:</p>
+    <p>This reset URL is valid for only 30 minutes.</p>
+    <a href="${resetUrl}" clicktracking=off>${resetUrl}</a>
+    <p>Regards,</p>
+    <p>Your App Team</p>`;
+
+  const subject = "Reset Your Password";
+  const send_to = user.email;
+  const sent_from = process.env.EMAIL_USER;
+
+  try {
+    await sendEmail(subject, message, send_to, sent_from);
+    res.status(200).json({ success: true, message: "Email sent" });
+  } catch (error) {
     res.status(500);
-    throw new Error("Email could not be sent,please try again");
-}
+    throw new Error("Email could not be sent, please try again");
+  }
 });
+//get all users
+const getAllUsers = asyncHandler(async (req, res) => {
+  const users = await User.find({});
+  res.json(users);
+});
+
+
 
 module.exports = {
   registerUser,
@@ -264,4 +295,6 @@ module.exports = {
   updateUser,
   changePassword,
   forgotPassword,
+  getAllUsers,
+ 
 };

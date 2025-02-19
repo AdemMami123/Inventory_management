@@ -30,4 +30,6 @@ const protect = asyncHandler(async (req, res, next) => {
 
 
 });
+// Restrict Route to Admins Only
+
 module.exports = protect;

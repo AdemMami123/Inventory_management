@@ -15,7 +15,7 @@ const productSchema = mongoose.Schema(
     //sku: Stock Keeping Unit 
     sku: {
       type: String,
-      required: true,
+      required: false,
       default: "SKU",
       trim: true,
     },
@@ -36,7 +36,7 @@ const productSchema = mongoose.Schema(
     },
     description: {
       type: String,
-      required: [true, "Please add a description"],
+      required: [false, "Please add a description"],
       trim: true,
     },
     image: {
