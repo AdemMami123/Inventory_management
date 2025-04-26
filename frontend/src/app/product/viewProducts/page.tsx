@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   Table,
   TableBody,
@@ -15,8 +15,9 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink } from "@/components/ui/pagination";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Search } from "lucide-react";
+import { Search, RefreshCw } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
+import { useRouter } from "next/navigation";
 
 interface Product {
   _id: string;
@@ -34,65 +35,115 @@ interface Product {
   };
 }
 
+const API_URL = "http://localhost:5000/api/products/";
+
 export default function ViewProducts() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [deleteProductId, setDeleteProductId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchType, setSearchType] = useState<"name" | "category">("name");
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const itemsPerPage = 5;
+  const router = useRouter();
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async (showRefreshingState = false) => {
     try {
-      setLoading(true);
+      if (showRefreshingState) {
+        setIsRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      setError(null);
+      
+      console.log("Fetching products from API...");
+      
       const response = await fetch("http://localhost:5000/api/products/", {
         method: "GET",
         credentials: "include",
+        headers: {
+          "Content-Type": "application/json"
+        }
       });
 
       if (!response.ok) {
-        throw new Error("Failed to fetch products, Please try to login.");
+        const errorData = await response.json().catch(() => null);
+        console.error("API Error:", response.status, errorData);
+        throw new Error(
+          errorData?.message || 
+          `Failed to fetch products (Status: ${response.status})`
+        );
       }
 
       const data = await response.json();
-      setProducts(data);
+      console.log("Products fetched successfully:", data);
+      
+      // Ensure data is an array before setting it to state
+      const productArray = Array.isArray(data) ? data : [];
+      setProducts(productArray);
+      
+      // Reset to first page when refreshing or initial load
+      if (showRefreshingState || currentPage > Math.ceil(productArray.length / itemsPerPage)) {
+        setCurrentPage(1);
+      }
     } catch (error) {
-      toast.error((error as Error).message);
+      console.error("Error fetching products:", error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to fetch products";
+      setError(errorMessage);
+      toast.error(errorMessage);
+      setProducts([]); // Set to empty array on error
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
+  }, [currentPage]);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
+
+  const handleRefresh = () => {
+    fetchProducts(true);
   };
 
   const handleDelete = async () => {
     if (!deleteProductId) return;
 
     try {
-      const response = await fetch(`http://localhost:5000/api/products/${deleteProductId}`, {
+      const response = await fetch(`${API_URL}${deleteProductId}`, {
         method: "DELETE",
         credentials: "include",
       });
 
       if (!response.ok) {
-        throw new Error("Failed to delete product");
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.message || "Failed to delete product");
       }
 
       setProducts((prevProducts) => prevProducts.filter((product) => product._id !== deleteProductId));
       setDeleteProductId(null);
 
       toast.success("Product deleted successfully!", { duration: 3000 });
+      
+      // If we deleted the last item on a page, go to previous page
+      const remainingProducts = products.filter(p => p._id !== deleteProductId);
+      const newTotalPages = Math.ceil(remainingProducts.length / itemsPerPage);
+      if (currentPage > newTotalPages && newTotalPages > 0) {
+        setCurrentPage(newTotalPages);
+      }
     } catch (error) {
-      toast.error((error as Error).message);
+      const errorMessage = error instanceof Error ? error.message : "Failed to delete product";
+      toast.error(errorMessage);
     }
   };
 
-  const filteredProducts = products.filter((product) =>
-    product[searchType]?.toString().toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredProducts = Array.isArray(products) 
+    ? products.filter((product) =>
+        product[searchType]?.toString().toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : [];
 
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -103,12 +154,21 @@ export default function ViewProducts() {
       <Toaster position="top-right" reverseOrder={false} />
 
       <Card className="w-full max-w-5xl mx-auto my-10 p-6 shadow-lg dark:bg-gray-900 bg-white">
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-lg font-semibold">Product List</CardTitle>
+          <Button 
+            size="sm" 
+            variant="outline" 
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="flex items-center gap-1"
+          >
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span>Refresh</span>
+          </Button>
         </CardHeader>
         <CardContent>
           <div className="flex gap-2 mb-4 items-center">
-            {/* Search Input with Icon */}
             <div className="relative w-64">
               <Search className="absolute left-3 top-3 text-gray-500" size={18} />
               <Input
@@ -120,7 +180,6 @@ export default function ViewProducts() {
               />
             </div>
 
-            {/* Search Filter Dropdown */}
             <Select value={searchType} onValueChange={(value) => setSearchType(value as "name" | "category")}>
               <SelectTrigger className="w-32 rounded-lg">
                 <SelectValue />
@@ -133,79 +192,112 @@ export default function ViewProducts() {
           </div>
 
           {loading ? (
-            <p className="text-center">Loading products...</p>
+            <div className="flex justify-center items-center py-12">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+            </div>
+          ) : error ? (
+            <div className="text-center py-8 text-red-500">
+              <p>{error}</p>
+              <Button 
+                className="mt-4" 
+                variant="outline" 
+                onClick={() => fetchProducts()}
+              >
+                Try Again
+              </Button>
+            </div>
+          ) : filteredProducts.length === 0 ? (
+            <p className="text-center py-8 text-gray-500">No products found</p>
           ) : (
             <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Image</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>SKU</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Quantity</TableHead>
-                    <TableHead>Price</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginatedProducts.map((product) => (
-                    <TableRow key={product._id}>
-                      <TableCell>
-                        {product.image?.filePath ? (
-                          <img
-                            src={`http://localhost:5000/${product.image.filePath.replace(/\\/g, "/")}`}
-                            alt={product.name}
-                            className="w-16 h-16 object-cover rounded"
-                          />
-                        ) : (
-                          <span>No Image</span>
-                        )}
-                      </TableCell>
-                      <TableCell>{product.name}</TableCell>
-                      <TableCell>{product.sku}</TableCell>
-                      <TableCell>{product.category}</TableCell>
-                      <TableCell>{product.quantity}</TableCell>
-                      <TableCell>${Number(product.price).toFixed(2)}</TableCell>
-                      <TableCell>
-                        <Button size="sm" variant="outline">Edit</Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          className="ml-2"
-                          onClick={() => setDeleteProductId(product._id)}
-                        >
-                          Delete
-                        </Button>
-                      </TableCell>
+              <div className="rounded-md border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Image</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>SKU</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Quantity</TableHead>
+                      <TableHead>Price</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedProducts.map((product) => (
+                      <TableRow key={product._id}>
+                        <TableCell>
+                          {product.image?.filePath ? (
+                            <img
+                              src={`http://localhost:5000/${product.image.filePath.replace(/\\/g, "/")}`}
+                              alt={product.name}
+                              className="w-16 h-16 object-cover rounded"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = "https://placehold.co/100x100?text=No+Image";
+                              }}
+                            />
+                          ) : (
+                            <div className="w-16 h-16 bg-gray-200 rounded flex items-center justify-center text-xs text-gray-500">
+                              No Image
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell className="font-medium">{product.name}</TableCell>
+                        <TableCell>{product.sku}</TableCell>
+                        <TableCell>
+                          <span className="px-2 py-1 rounded-full text-xs bg-secondary text-secondary-foreground">
+                            {product.category}
+                          </span>
+                        </TableCell>
+                        <TableCell>{product.quantity}</TableCell>
+                        <TableCell>${Number(product.price).toFixed(2)}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => router.push(`/product/editProduct?id=${product._id}`)}
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => setDeleteProductId(product._id)}
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </>
           )}
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <Pagination>
-              <PaginationContent>
-                {[...Array(totalPages)].map((_, index) => (
-                  <PaginationItem key={index}>
-                    <PaginationLink
-                      isActive={currentPage === index + 1}
-                      onClick={() => setCurrentPage(index + 1)}
-                    >
-                      {index + 1}
-                    </PaginationLink>
-                  </PaginationItem>
-                ))}
-              </PaginationContent>
-            </Pagination>
+          {!loading && !error && totalPages > 1 && (
+            <div className="mt-4 flex justify-center">
+              <Pagination>
+                <PaginationContent>
+                  {[...Array(totalPages)].map((_, index) => (
+                    <PaginationItem key={index}>
+                      <PaginationLink
+                        isActive={currentPage === index + 1}
+                        onClick={() => setCurrentPage(index + 1)}
+                      >
+                        {index + 1}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                </PaginationContent>
+              </Pagination>
+            </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Delete Confirmation Dialog */}
       <Dialog open={!!deleteProductId} onOpenChange={() => setDeleteProductId(null)}>
         <DialogContent>
           <DialogHeader>
