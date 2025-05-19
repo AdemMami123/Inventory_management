@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "@/components/layouts/sidebar";
 import { NavigationMenuDemo } from "@/components/layouts/nav";
 import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
+import { useTheme } from "next-themes";
 
 export default function ClientLayout({
   children,
@@ -12,6 +13,24 @@ export default function ClientLayout({
   children: React.ReactNode;
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const { theme } = useTheme();
+
+  // Only render UI after component is mounted to prevent hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // If not mounted yet, render a simple layout to prevent hydration errors
+  if (!mounted) {
+    return (
+      <div className="flex h-screen overflow-hidden">
+        <div className="flex flex-col flex-1">
+          <main className="flex-1 p-4 md:p-6 overflow-auto">{children}</main>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen overflow-hidden">

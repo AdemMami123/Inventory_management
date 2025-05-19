@@ -6,29 +6,47 @@ const protect = asyncHandler(async (req, res, next) => {
     try {
         const token = req.cookies.token;
         if (!token) {
-            res.status(401);
-            throw new Error("Not authorized,please login");
+            res.status(401).json({
+                success: false,
+                message: "Not authorized, please login"
+            });
+            return;
         }
-        //verify token
-        const verified = jwt.verify(token, process.env.JWT_SECRET);
-        //get user from token
-        user=await User.findById(verified.id).select("-password");
 
-        if (!user) {
-            res.status(401);
-            throw new Error("User not found");
+        // Verify token
+        try {
+            const verified = jwt.verify(token, process.env.JWT_SECRET);
+
+            // Get user from token
+            const user = await User.findById(verified.id).select("-password");
+
+            if (!user) {
+                res.status(401).json({
+                    success: false,
+                    message: "User not found"
+                });
+                return;
+            }
+
+            // Attach user to request
+            req.user = user;
+            next();
+        } catch (jwtError) {
+            console.error("JWT verification error:", jwtError);
+            res.status(401).json({
+                success: false,
+                message: "Invalid or expired token, please login again"
+            });
+            return;
         }
-        req.user = user;
-        next();
     } catch (error) {
-        res.status(401);
-        throw new Error("Not authorized,please login");
-        
-
+        console.error("Auth middleware error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Authentication error"
+        });
+        return;
     }
-
-
-
 });
 // Restrict Route to Admins Only
 

@@ -15,9 +15,11 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink } from "@/components/ui/pagination";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Search, RefreshCw } from "lucide-react";
+import { Search, RefreshCw, ShieldAlert, Eye, Edit, Trash2, ShoppingCart, PlusCircle } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
-import { useRouter } from "next/navigation";
+import RoleIndicator from "@/components/common/RoleIndicator";
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface Product {
   _id: string;
@@ -47,7 +49,32 @@ export default function ViewProducts() {
   const [searchType, setSearchType] = useState<"name" | "category">("name");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const itemsPerPage = 5;
-  const router = useRouter();
+
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  // Fetch user role on component mount
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/api/users/getuser", {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json"
+          }
+        });
+
+        if (response.ok) {
+          const userData = await response.json();
+          setUserRole(userData.role);
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+      }
+    };
+
+    fetchUserData();
+  }, []);
 
   const fetchProducts = useCallback(async (showRefreshingState = false) => {
     try {
@@ -57,9 +84,9 @@ export default function ViewProducts() {
         setLoading(true);
       }
       setError(null);
-      
+
       console.log("Fetching products from API...");
-      
+
       const response = await fetch("http://localhost:5000/api/products/", {
         method: "GET",
         credentials: "include",
@@ -72,18 +99,18 @@ export default function ViewProducts() {
         const errorData = await response.json().catch(() => null);
         console.error("API Error:", response.status, errorData);
         throw new Error(
-          errorData?.message || 
+          errorData?.message ||
           `Failed to fetch products (Status: ${response.status})`
         );
       }
 
       const data = await response.json();
       console.log("Products fetched successfully:", data);
-      
+
       // Ensure data is an array before setting it to state
       const productArray = Array.isArray(data) ? data : [];
       setProducts(productArray);
-      
+
       // Reset to first page when refreshing or initial load
       if (showRefreshingState || currentPage > Math.ceil(productArray.length / itemsPerPage)) {
         setCurrentPage(1);
@@ -126,7 +153,7 @@ export default function ViewProducts() {
       setDeleteProductId(null);
 
       toast.success("Product deleted successfully!", { duration: 3000 });
-      
+
       // If we deleted the last item on a page, go to previous page
       const remainingProducts = products.filter(p => p._id !== deleteProductId);
       const newTotalPages = Math.ceil(remainingProducts.length / itemsPerPage);
@@ -139,7 +166,7 @@ export default function ViewProducts() {
     }
   };
 
-  const filteredProducts = Array.isArray(products) 
+  const filteredProducts = Array.isArray(products)
     ? products.filter((product) =>
         product[searchType]?.toString().toLowerCase().includes(searchQuery.toLowerCase())
       )
@@ -155,17 +182,57 @@ export default function ViewProducts() {
 
       <Card className="w-full max-w-5xl mx-auto my-10 p-6 shadow-lg dark:bg-gray-900 bg-white">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-lg font-semibold">Product List</CardTitle>
-          <Button 
-            size="sm" 
-            variant="outline" 
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            className="flex items-center gap-1"
-          >
-            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            <span>Refresh</span>
-          </Button>
+          <div className="flex items-center gap-3">
+            <CardTitle className="text-lg font-semibold">Product List</CardTitle>
+            <RoleIndicator showLabel={true} />
+
+            {/* Role-based access information */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge variant="outline" className="ml-2 cursor-help">
+                    <ShieldAlert className="h-3.5 w-3.5 mr-1" />
+                    <span className="text-xs">Access Info</span>
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent className="w-80 p-4">
+                  <div className="space-y-2">
+                    <h4 className="font-semibold">Role-Based Access:</h4>
+                    <div className="text-sm space-y-1">
+                      <p><span className="font-medium">Customers:</span> Can view products and place orders</p>
+                      <p><span className="font-medium">Admin/Manager:</span> Full product management (create, edit, delete)</p>
+                    </div>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Add Product button - only for admin/manager */}
+            {userRole && ['admin', 'manager'].includes(userRole) && (
+              <Button
+                size="sm"
+                variant="default"
+                onClick={() => window.location.href = '/product/addProduct'}
+                className="flex items-center gap-1"
+              >
+                <PlusCircle className="h-4 w-4" />
+                <span>Add Product</span>
+              </Button>
+            )}
+
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="flex items-center gap-1"
+            >
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <span>Refresh</span>
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="flex gap-2 mb-4 items-center">
@@ -198,9 +265,9 @@ export default function ViewProducts() {
           ) : error ? (
             <div className="text-center py-8 text-red-500">
               <p>{error}</p>
-              <Button 
-                className="mt-4" 
-                variant="outline" 
+              <Button
+                className="mt-4"
+                variant="outline"
                 onClick={() => fetchProducts()}
               >
                 Try Again
@@ -253,20 +320,83 @@ export default function ViewProducts() {
                         <TableCell>${Number(product.price).toFixed(2)}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => router.push(`/product/editProduct?id=${product._id}`)}
-                            >
-                              Edit
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => setDeleteProductId(product._id)}
-                            >
-                              Delete
-                            </Button>
+                            {/* View button for all users */}
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => window.location.href = `/product/details/${product._id}`}
+                                    className="h-8 w-8 p-0"
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>View Details</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+
+                            {/* Admin/Manager only actions */}
+                            {userRole && ['admin', 'manager'].includes(userRole) ? (
+                              <>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => window.location.href = `/product/editProduct?id=${product._id}`}
+                                        className="h-8 w-8 p-0"
+                                      >
+                                        <Edit className="h-4 w-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Edit Product</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => setDeleteProductId(product._id)}
+                                        className="h-8 w-8 p-0 text-red-500 hover:text-red-600"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Delete Product</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </>
+                            ) : (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => window.location.href = `/orders/create?productId=${product._id}`}
+                                      className="h-8 w-8 p-0 text-green-500 hover:text-green-600"
+                                    >
+                                      <ShoppingCart className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Order Product</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>

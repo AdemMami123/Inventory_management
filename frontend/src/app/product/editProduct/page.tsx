@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -44,7 +44,6 @@ export default function EditProductPage() {
   const [product, setProduct] = useState<Product | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const router = useRouter();
   const searchParams = useSearchParams();
   const productId = searchParams ? searchParams.get('id') : null;
 
@@ -53,7 +52,7 @@ export default function EditProductPage() {
     const fetchProduct = async () => {
       if (!productId) {
         toast.error("No product ID provided");
-        setTimeout(() => router.push("/product/viewProducts"), 1500);
+        setTimeout(() => window.location.href = "/product/viewProducts", 1500);
         return;
       }
 
@@ -95,14 +94,14 @@ export default function EditProductPage() {
         const errorMessage = error instanceof Error ? error.message : "Failed to fetch product";
         toast.error(errorMessage);
         // Navigate back to products list after short delay if fetch fails
-        setTimeout(() => router.push("/product/viewProducts"), 2000);
+        setTimeout(() => window.location.href = "/product/viewProducts", 2000);
       } finally {
         setFetchLoading(false);
       }
     };
 
     fetchProduct();
-  }, [productId, setValue, router]);
+  }, [productId, setValue]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -147,7 +146,7 @@ export default function EditProductPage() {
       
       // Navigate back to product list
       setTimeout(() => {
-        router.push("/product/viewProducts");
+        window.location.href = "/product/viewProducts";
       }, 1500);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Failed to update product";
@@ -267,7 +266,7 @@ export default function EditProductPage() {
               <Button 
                 type="button" 
                 variant="outline" 
-                onClick={() => router.push("/product/viewProducts")}
+                onClick={() => window.location.href = "/product/viewProducts"}
               >
                 Cancel
               </Button>

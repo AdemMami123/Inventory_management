@@ -44,6 +44,13 @@ const createProduct = asyncHandler(async (req, res) => {
 
 // Get all Products
 const getProducts = asyncHandler(async (req, res) => {
+  // If this is a public request or from a customer, return all products
+  if (!req.user || req.user.role === 'customer') {
+    const products = await Product.find().sort("-createdAt");
+    return res.status(200).json(products);
+  }
+
+  // For admin/manager/employee, return products they created
   const products = await Product.find({ user: req.user.id }).sort("-createdAt");
   res.status(200).json(products);
 });
@@ -56,11 +63,18 @@ const getProduct = asyncHandler(async (req, res) => {
     res.status(404);
     throw new Error("Product not found");
   }
-  // Match product to its user
+
+  // If user is a customer, they can view any product
+  if (req.user.role === 'customer') {
+    return res.status(200).json(product);
+  }
+
+  // For admin/manager/employee, match product to its user
   if (product.user.toString() !== req.user.id) {
     res.status(401);
     throw new Error("User not authorized");
   }
+
   res.status(200).json(product);
 });
 
@@ -109,7 +123,7 @@ const updateProduct = asyncHandler(async (req, res) => {
    let fileData = {};
    if (req.file) {
      const filePath = path.join("uploads", req.file.filename); // Save image locally
- 
+
      fileData = {
        fileName: req.file.originalname,
        filePath: filePath,

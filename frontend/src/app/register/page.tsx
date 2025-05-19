@@ -1,9 +1,11 @@
 "use client";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { Toaster, toast } from "react-hot-toast";
 
 const Signup = () => {
   const [name, setName] = useState("");
@@ -19,19 +21,67 @@ const Signup = () => {
     setLoading(true);
 
     try {
+      // Proceed directly with registration without checking email
+      // The backend will handle duplicate email validation
       const response = await fetch("http://localhost:5000/api/users/register", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({ name, email, password }),
-        credentials: "include", 
+        credentials: "include",
       });
 
+      // Try to parse the response as JSON
+      let data;
+      const responseText = await response.text();
+
+      try {
+        // First check if the response is valid JSON
+        if (responseText.trim()) {
+          try {
+            data = JSON.parse(responseText);
+          } catch (jsonError) {
+            console.error("Invalid JSON response:", responseText);
+            console.error("JSON parse error:", jsonError);
+
+            // Check if it's an HTML response (likely an error page)
+            if (responseText.includes("<!DOCTYPE html>") || responseText.includes("<html>")) {
+              throw new Error("Server returned an HTML page instead of JSON. The server might be experiencing issues.");
+            } else {
+              throw new Error(`Registration failed: ${response.status} ${response.statusText}`);
+            }
+          }
+        }
+      } catch (parseError) {
+        console.error("Error handling response:", parseError);
+        throw parseError;
+      }
+
       if (!response.ok) {
-        throw new Error("Registration failed. Please try again.");
+        // If we have data with a message, use it
+        if (data && data.message) {
+          throw new Error(data.message);
+        } else if (data && data.error) {
+          throw new Error(data.error);
+        } else {
+          throw new Error(`Registration failed (${response.status}). Please try again.`);
+        }
       }
 
       console.log("✅ Registration successful!");
-      router.push("/login"); 
+
+      // Show success message and redirect after a short delay
+      setError(null);
+
+      // Show success message using toast
+      toast.success("Registration successful! Redirecting to login...", {
+        duration: 3000,
+      });
+
+      setTimeout(() => {
+        router.push("/login");
+      }, 2000);
     } catch (error) {
       if (error instanceof Error) {
         setError(error.message);
@@ -45,6 +95,7 @@ const Signup = () => {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-black">
+      <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
       <div className="max-w-md w-full mx-auto rounded-none md:rounded-2xl md:p-8 shadow-input bg-white dark:bg-black">
         <h2 className="font-bold text-xl text-neutral-800 dark:text-neutral-200">
           Sign Up 🚀
@@ -100,7 +151,14 @@ const Signup = () => {
             {loading ? "Signing up..." : "Sign up →"}
           </button>
 
-          <div className="bg-gradient-to-r from-transparent via-neutral-300 dark:via-neutral-700 to-transparent my-8 h-[1px] w-full" />
+          <div className="bg-gradient-to-r from-transparent via-neutral-300 dark:via-neutral-700 to-transparent my-6 h-[1px] w-full" />
+
+          <div className="text-center text-sm text-gray-600 dark:text-gray-400">
+            Already have an account?{" "}
+            <Link href="/login" className="text-blue-600 hover:underline dark:text-blue-400">
+              Log in
+            </Link>
+          </div>
         </form>
       </div>
     </div>

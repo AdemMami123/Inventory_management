@@ -26,6 +26,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "react-hot-toast";
+import OrderDetail from "@/components/orders/OrderDetail";
 
 export default function CustomerOrders() {
   const [orders, setOrders] = useState([]);
@@ -50,8 +51,14 @@ export default function CustomerOrders() {
         throw new Error("Failed to fetch orders. Please try logging in again.");
       }
 
-      const data = await response.json();
-      setOrders(data);
+      const responseData = await response.json();
+      // Check if the response has a data property (new API format)
+      if (responseData && responseData.data) {
+        setOrders(responseData.data);
+      } else {
+        // Fallback to the old format or empty array if no data
+        setOrders(Array.isArray(responseData) ? responseData : []);
+      }
     } catch (error) {
       toast.error(error.message);
     } finally {
@@ -89,8 +96,14 @@ export default function CustomerOrders() {
         throw new Error("Failed to fetch order details");
       }
 
-      const orderData = await response.json();
-      setSelectedOrder(orderData);
+      const responseData = await response.json();
+      // Check if the response has a data property (new API format)
+      if (responseData && responseData.data) {
+        setSelectedOrder(responseData.data);
+      } else {
+        // Fallback to the old format
+        setSelectedOrder(responseData);
+      }
       setOrderDetailsOpen(true);
     } catch (error) {
       toast.error(error.message);
@@ -117,9 +130,9 @@ export default function CustomerOrders() {
   };
 
   const formatDate = (dateString) => {
-    const options = { 
-      year: 'numeric', 
-      month: 'long', 
+    const options = {
+      year: 'numeric',
+      month: 'long',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
@@ -162,11 +175,11 @@ export default function CustomerOrders() {
                   <TableRow key={order._id}>
                     <TableCell className="font-mono text-xs">{order._id.substring(0, 8)}...</TableCell>
                     <TableCell>{formatDate(order.createdAt)}</TableCell>
-                    <TableCell>${order.totalAmount.toFixed(2)}</TableCell>
+                    <TableCell>${typeof order.totalAmount === 'number' ? order.totalAmount.toFixed(2) : Number(order.totalAmount).toFixed(2)}</TableCell>
                     <TableCell>{getStatusBadge(order.status)}</TableCell>
                     <TableCell>
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         size="sm"
                         onClick={() => viewOrderDetails(order._id)}
                       >
@@ -184,88 +197,12 @@ export default function CustomerOrders() {
       {/* Order Details Dialog */}
       {selectedOrder && (
         <Dialog open={orderDetailsOpen} onOpenChange={setOrderDetailsOpen}>
-          <DialogContent className="max-w-3xl">
-            <DialogHeader>
-              <DialogTitle className="text-xl font-semibold">Order Details</DialogTitle>
-            </DialogHeader>
-            
-            <div className="space-y-4">
-              {/* Order Status */}
-              <div className="border-b pb-4">
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="font-semibold">Status</h3>
-                  {getStatusBadge(selectedOrder.status)}
-                </div>
-                <p className="text-sm text-gray-600 dark:text-gray-300">
-                  {getStatusMessage(selectedOrder.status)}
-                </p>
-                {selectedOrder.notes && (
-                  <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-md text-sm">
-                    <strong>Note:</strong> {selectedOrder.notes}
-                  </div>
-                )}
-              </div>
-              
-              {/* Order Info */}
-              <div className="grid grid-cols-2 gap-4 text-sm border-b pb-4">
-                <div>
-                  <p className="text-gray-500 dark:text-gray-400">Order ID</p>
-                  <p className="font-mono">{selectedOrder._id}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500 dark:text-gray-400">Date Placed</p>
-                  <p>{formatDate(selectedOrder.createdAt)}</p>
-                </div>
-                {selectedOrder.trackingNumber && (
-                  <div>
-                    <p className="text-gray-500 dark:text-gray-400">Tracking Number</p>
-                    <p className="font-mono">{selectedOrder.trackingNumber}</p>
-                  </div>
-                )}
-                {selectedOrder.estimatedDelivery && (
-                  <div>
-                    <p className="text-gray-500 dark:text-gray-400">Estimated Delivery</p>
-                    <p>{formatDate(selectedOrder.estimatedDelivery)}</p>
-                  </div>
-                )}
-              </div>
-              
-              {/* Order Items */}
-              <div>
-                <h3 className="font-semibold mb-2">Ordered Items</h3>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Item</TableHead>
-                      <TableHead>Quantity</TableHead>
-                      <TableHead>Price</TableHead>
-                      <TableHead>Total</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {selectedOrder.products.map((item, index) => (
-                      <TableRow key={index}>
-                        <TableCell>{item.product.name}</TableCell>
-                        <TableCell>{item.quantity}</TableCell>
-                        <TableCell>${item.product.price.toFixed(2)}</TableCell>
-                        <TableCell>${(item.quantity * item.product.price).toFixed(2)}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                
-                <div className="flex justify-end mt-4 font-semibold">
-                  <p className="mr-4">Total Amount:</p>
-                  <p>${selectedOrder.totalAmount.toFixed(2)}</p>
-                </div>
-              </div>
-            </div>
-            
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setOrderDetailsOpen(false)}>
-                Close
-              </Button>
-            </DialogFooter>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <OrderDetail
+              order={selectedOrder}
+              userRole="customer"
+              onClose={() => setOrderDetailsOpen(false)}
+            />
           </DialogContent>
         </Dialog>
       )}

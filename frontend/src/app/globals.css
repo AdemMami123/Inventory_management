@@ -41,7 +41,11 @@ body {
     --sidebar-accent-foreground: 45 70% 90%;
     --sidebar-border: 215 30% 30%;
     --sidebar-ring: 28 70% 55%;
+
+    /* Fix for color-scheme */
+    color-scheme: light;
   }
+
   .dark {
     --background: 220 45% 13%;
     --foreground: 45 70% 90%;
@@ -75,6 +79,9 @@ body {
     --sidebar-accent-foreground: 45 70% 90%;
     --sidebar-border: 215 35% 25%;
     --sidebar-ring: 28 70% 55%;
+
+    /* Fix for color-scheme */
+    color-scheme: dark;
   }
 }
 
@@ -87,27 +94,4 @@ body {
   }
 }
 
-/*sidebar css*/
-@layer base {
-  :root {
-    --sidebar-background: 215 50% 23%;
-    --sidebar-foreground: 45 70% 90%;
-    --sidebar-primary: 28 70% 55%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 215 30% 30%;
-    --sidebar-accent-foreground: 45 70% 90%;
-    --sidebar-border: 215 30% 30%;
-    --sidebar-ring: 28 70% 55%;
-  }
- 
-  .dark {
-    --sidebar-background: 220 45% 13%;
-    --sidebar-foreground: 45 70% 90%;
-    --sidebar-primary: 28 70% 55%;
-    --sidebar-primary-foreground: 220 45% 13%;
-    --sidebar-accent: 215 35% 25%;
-    --sidebar-accent-foreground: 45 70% 90%;
-    --sidebar-border: 215 35% 25%;
-    --sidebar-ring: 28 70% 55%;
-  }
-}
+/* Custom styles for specific components can be added here */

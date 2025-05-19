@@ -16,110 +16,149 @@ const generateToken = (id) => {
 
 // Register User
 const registerUser = asyncHandler(async (req, res) => {
-  const { name, email, password, role } = req.body;
+  try {
+    const { name, email, password, role } = req.body;
 
-  // Validation
-  if (!name || !email || !password) {
-    res.status(400);
-    throw new Error("Please fill all the fields");
-  }
-  if (password.length < 6) {
-    res.status(400);
-    throw new Error("Password must be at least 6 characters long");
-  }
+    // Validation
+    if (!name || !email || !password) {
+      res.status(400).json({
+        success: false,
+        message: "Please fill all the fields"
+      });
+      return;
+    }
 
-  // Check if user email already exists
-  const userExists = await User.findOne({ email });
-  if (userExists) {
-    res.status(400);
-    throw new Error("User already exists");
-  }
+    if (password.length < 6) {
+      res.status(400).json({
+        success: false,
+        message: "Password must be at least 6 characters long"
+      });
+      return;
+    }
 
-  // Create user
-  const user = await User.create({
-    name,
-    email,
-    password,
-    role: role || "employee", 
-  });
+    // Check if user email already exists
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      res.status(400).json({
+        success: false,
+        message: "User already exists"
+      });
+      return;
+    }
 
-  // Generate token for user
-  const token = generateToken(user._id);
-
-  // Send HTTP-only cookie
-  res.cookie("token", token, {
-    path: "/",
-    httpOnly: true,
-    expires: new Date(Date.now() + 1000 * 86400), // 1 day
-    sameSite: "none",
-    secure: true,
-  });
-
-  if (user) {
-    const { _id, name, email, photo, phone, bio, role } = user;
-    res.status(201).json({
-      _id,
+    // Create user
+    const user = await User.create({
       name,
       email,
-      photo,
-      phone,
-      bio,
-      role,
-      token,
+      password,
+      role: role || "customer", // Default to customer for new registrations
     });
-  } else {
-    res.status(400);
-    throw new Error("Invalid user data");
+
+    // Generate token for user
+    const token = generateToken(user._id);
+
+    // Send HTTP-only cookie
+    res.cookie("token", token, {
+      path: "/",
+      httpOnly: true,
+      expires: new Date(Date.now() + 1000 * 86400), // 1 day
+      sameSite: "none",
+      secure: true,
+      domain: "localhost",
+    });
+
+    if (user) {
+      const { _id, name, email, photo, phone, bio, role } = user;
+      res.status(201).json({
+        success: true,
+        _id,
+        name,
+        email,
+        photo,
+        phone,
+        bio,
+        role,
+        token,
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: "Invalid user data"
+      });
+    }
+  } catch (error) {
+    console.error("Registration error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Server error during registration"
+    });
   }
 });
 
 // Login User
 const loginUser = asyncHandler(async (req, res) => {
-  const { email, password } = req.body;
+  try {
+    const { email, password } = req.body;
 
-  // Validation
-  if (!email || !password) {
-    res.status(400);
-    throw new Error("Please fill all the fields");
-  }
+    // Validation
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Please fill all the fields"
+      });
+    }
 
-  // Check if user exists
-  const user = await User.findOne({ email });
-  if (!user) {
-    res.status(401);
-    throw new Error("Invalid credentials");
-  }
+    // Check if user exists
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password"
+      });
+    }
 
-  // Check if password matches
-  const passwordIsCorrect = await bcrypt.compare(password, user.password);
+    // Check if password matches
+    const passwordIsCorrect = await bcrypt.compare(password, user.password);
 
-  // Generate token for user
-  const token = generateToken(user._id);
+    if (!passwordIsCorrect) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password"
+      });
+    }
 
-  // Send HTTP-only cookie
-  res.cookie("token", token, {
-    path: "/",
-    httpOnly: true,
-    expires: new Date(Date.now() + 1000 * 86400), // 1 day
-    sameSite: "none",
-    secure: true,
-  });
+    // Generate token for user
+    const token = generateToken(user._id);
 
-  if (user && passwordIsCorrect) {
-    const { _id, name, email, photo, phone, bio, role } = user;
-    res.status(200).json({
+    // Send HTTP-only cookie
+    res.cookie("token", token, {
+      path: "/",
+      httpOnly: true,
+      expires: new Date(Date.now() + 1000 * 86400), // 1 day
+      sameSite: "none",
+      secure: true,
+      domain: "localhost",
+    });
+
+    // Return user data
+    const { _id, name, email: userEmail, photo, phone, bio, role } = user;
+    return res.status(200).json({
+      success: true,
       _id,
       name,
-      email,
+      email: userEmail,
       photo,
       phone,
       bio,
       role,
       token,
     });
-  } else {
-    res.status(401);
-    throw new Error("Invalid credentials");
+  } catch (error) {
+    console.error("Login error:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "An error occurred during login"
+    });
   }
 });
 
@@ -131,6 +170,7 @@ const logoutUser = asyncHandler(async (req, res) => {
     expires: new Date(0),
     sameSite: "none",
     secure: true,
+    domain: "localhost",
   });
   res.status(200).json({ message: "Logged out successfully" });
 });
@@ -157,15 +197,38 @@ const getUser = asyncHandler(async (req, res) => {
 
 // Get Login Status
 const loginStatus = asyncHandler(async (req, res) => {
-  const token = req.cookies.token;
-  if (!token) {
-    return res.json(false);
+  try {
+    const token = req.cookies.token;
+
+    // If no token, user is not logged in
+    if (!token) {
+      return res.status(200).json(false);
+    }
+
+    // Verify the token
+    try {
+      const verified = jwt.verify(token, process.env.JWT_SECRET);
+      if (verified) {
+        // Check if user still exists in database
+        const user = await User.findById(verified.id).select("-password");
+        if (user) {
+          return res.status(200).json(true);
+        }
+      }
+      // If verification fails or user doesn't exist, return false
+      return res.status(200).json(false);
+    } catch (error) {
+      // If token verification fails (expired, invalid, etc.)
+      console.error("Token verification error:", error);
+      return res.status(200).json(false);
+    }
+  } catch (error) {
+    console.error("Login status error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Error checking login status"
+    });
   }
-  const verified = jwt.verify(token, process.env.JWT_SECRET);
-  if (verified) {
-    return res.json(true);
-  }
-  return res.json(false);
 });
 
 // Update User
@@ -284,7 +347,21 @@ const getAllUsers = asyncHandler(async (req, res) => {
   res.json(users);
 });
 
+// Check if email exists
+const checkEmail = asyncHandler(async (req, res) => {
+  const { email } = req.query;
 
+  if (!email) {
+    res.status(400);
+    throw new Error("Email is required");
+  }
+
+  const user = await User.findOne({ email });
+
+  res.status(200).json({
+    exists: !!user
+  });
+});
 
 module.exports = {
   registerUser,
@@ -296,5 +373,5 @@ module.exports = {
   changePassword,
   forgotPassword,
   getAllUsers,
- 
+  checkEmail,
 };

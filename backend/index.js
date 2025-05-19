@@ -1,22 +1,26 @@
-require('dotenv').config(); 
+require('dotenv').config();
 
 const bodyParser = require('body-parser');
 const express = require("express");
 const mongoose = require("mongoose");
 const userRoutes = require('./routes/userRoutes');
 const productRoute = require('./routes/productRoute');
+const orderRoute = require('./routes/orderRoute');
 const errorHandler = require('./middleware/errorMiddleware');
 const cookieParser = require('cookie-parser');
 const cors = require("cors");
 const fs = require("fs");
-const path = require("path"); 
+const path = require("path");
 
 const app = express();
 
 // Enable CORS
 app.use(cors({
-    origin: "http://localhost:3000", 
-    credentials: true, 
+    origin: ["http://localhost:3000", "http://localhost:3001"], // Frontend URLs
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+    exposedHeaders: ["set-cookie"]
 }));
 
 // Create 'uploads' folder if it doesn't exist
@@ -37,6 +41,7 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads"))); // ✅ Fix
 // Routes middleware
 app.use("/api/users", userRoutes);
 app.use("/api/products", productRoute);
+app.use("/api/orders", orderRoute);
 
 // Test route
 app.get("/", (req, res) => {
@@ -47,11 +52,11 @@ app.get("/", (req, res) => {
 app.use(errorHandler);
 
 // Database connection
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5000; // Using port 5000 as expected by frontend
 
 console.log("MONGO_URI:", process.env.MONGO_URI);
 
-mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+mongoose.connect(process.env.MONGO_URI)
     .then(() => {
         console.log("✅ Connected to MongoDB");
         app.listen(PORT, () => {

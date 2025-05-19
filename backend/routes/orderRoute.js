@@ -1,14 +1,15 @@
 const express = require("express");
 const router = express.Router();
 const verifyToken = require("../middleware/verifyToken");
-const verifyRole = require("../middleware/verifyRole");
-const { 
+const { verifyRole, verifyOwnership } = require("../middleware/verifyRole");
+const Order = require("../models/order");
+const {
   getAvailableProductsForOrders,
-  createOrder, 
-  getAllOrders, 
-  getCustomerOrders, 
-  getOrderById, 
-  updateOrderStatus 
+  createOrder,
+  getAllOrders,
+  getCustomerOrders,
+  getOrderById,
+  updateOrderStatus
 } = require("../controllers/orderController");
 
 // Get available products for order creation (All authenticated users)
@@ -19,16 +20,67 @@ router.get("/available-products", verifyToken, getAvailableProductsForOrders);
 // Customers can only create orders for themselves
 router.post("/", verifyToken, createOrder);
 
-// Get all orders (Staff only)
-router.get("/all", verifyToken, verifyRole("employee", "manager", "admin"), getAllOrders);
+// Get all orders (Admin and Manager only)
+router.get("/all", verifyToken, verifyRole("manager", "admin"), getAllOrders);
 
 // Customer gets their own orders
-router.get("/my-orders", verifyToken, verifyRole("customer"), getCustomerOrders);
+// This route is accessible to all roles, but customers will only see their own orders
+router.get("/my-orders", verifyToken, getCustomerOrders);
 
-// Get a specific order by ID (accessible by staff and the customer who placed it)
-router.get("/:id", verifyToken, getOrderById);
+// Get order statistics (Admin and Manager only)
+router.get("/stats", verifyToken, verifyRole("manager", "admin"), (req, res) => {
+  // This would be implemented in the controller
+  res.status(200).json({
+    success: true,
+    message: "Order statistics endpoint - to be implemented"
+  });
+});
 
-// Update order status (Staff only)
-router.patch("/:id/status", verifyToken, verifyRole("employee", "manager", "admin"), updateOrderStatus);
+// Get a specific order by ID
+// Uses ownership verification to ensure customers can only access their own orders
+router.get("/:id", verifyToken,
+  verifyOwnership(async (req) => {
+    const order = await Order.findById(req.params.id);
+    return order ? order.customer : null;
+  }),
+  getOrderById
+);
+
+// Update order status (Admin and Manager only)
+router.patch("/:id/status",
+  verifyToken,
+  verifyRole("manager", "admin"),
+  updateOrderStatus
+);
+
+// Accept order (Admin and Manager only) - Changes status to "Shipped"
+router.patch("/:id/accept",
+  verifyToken,
+  verifyRole("manager", "admin"),
+  (req, res) => {
+    req.body.status = "Shipped";
+    updateOrderStatus(req, res);
+  }
+);
+
+// Refuse order (Admin and Manager only) - Changes status to "Cancelled"
+router.patch("/:id/refuse",
+  verifyToken,
+  verifyRole("manager", "admin"),
+  (req, res) => {
+    req.body.status = "Cancelled";
+    updateOrderStatus(req, res);
+  }
+);
+
+// Process order (Admin and Manager only) - Changes status to "Delivered"
+router.patch("/:id/process",
+  verifyToken,
+  verifyRole("manager", "admin"),
+  (req, res) => {
+    req.body.status = "Delivered";
+    updateOrderStatus(req, res);
+  }
+);
 
 module.exports = router;
