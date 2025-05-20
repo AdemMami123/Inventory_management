@@ -185,12 +185,14 @@ const SidebarContent = () => {
 
             {/* Customer-specific options */}
             {isCustomer && (
-              <SidebarSubItem
-                icon={FileText}
-                text="My Orders"
-                link="/orders/history"
-                active={pathname === '/orders/history'}
-              />
+              <>
+                <SidebarSubItem
+                  icon={FileText}
+                  text="My Orders"
+                  link="/orders/my-orders"
+                  active={pathname === '/orders/my-orders'}
+                />
+              </>
             )}
 
             {/* Staff-specific options */}

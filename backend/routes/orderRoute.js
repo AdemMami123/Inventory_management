@@ -13,6 +13,7 @@ const {
   updatePaymentInfo,
   getOrderStats
 } = require("../controllers/orderController");
+const { generateInvoice } = require("../controllers/invoiceController");
 
 // Get available products for order creation (All authenticated users)
 router.get("/available-products", verifyToken, getAvailableProductsForOrders);
@@ -54,6 +55,17 @@ router.patch("/:id/payment",
   verifyToken,
   verifyRole("manager", "admin"),
   updatePaymentInfo
+);
+
+// Generate and download invoice (Customer, Admin, Manager)
+// Uses ownership verification to ensure customers can only access their own invoices
+router.get("/:id/invoice",
+  verifyToken,
+  verifyOwnership(async (req) => {
+    const order = await Order.findById(req.params.id);
+    return order ? order.customer : null;
+  }),
+  generateInvoice
 );
 
 // Approve order (Admin and Manager only) - Changes status to "Approved"
@@ -117,6 +129,24 @@ router.patch("/:id/cancel",
     req.body.notes = req.body.notes || "Order cancelled";
     updateOrderStatus(req, res);
   }
+);
+
+// Generate and download invoice (Admin, Manager, and Customer)
+// Customers can only access invoices for their own delivered orders
+router.get("/:id/invoice",
+  verifyToken,
+  verifyOwnership(async (req) => {
+    const order = await Order.findById(req.params.id);
+
+    // Admin and Manager can access any invoice
+    if (req.user.role === "admin" || req.user.role === "manager") {
+      return null; // Skip ownership check
+    }
+
+    // For customers, check ownership
+    return order ? order.customer : null;
+  }),
+  generateInvoice
 );
 
 module.exports = router;

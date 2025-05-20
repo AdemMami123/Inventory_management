@@ -1,5 +1,6 @@
 const sendEmail = require('./sendEmail');
 const User = require('../models/user');
+const { generateInvoicePDF } = require('./invoiceGenerator');
 
 /**
  * Send an email notification about an order status change
@@ -7,12 +8,13 @@ const User = require('../models/user');
  * @param {String} previousStatus - The previous status of the order
  * @param {String} newStatus - The new status of the order
  * @param {Object} user - The user who made the change (admin/manager)
+ * @param {Boolean} attachInvoice - Whether to attach an invoice PDF (for delivered orders)
  */
-const sendOrderStatusNotification = async (order, previousStatus, newStatus, user) => {
+const sendOrderStatusNotification = async (order, previousStatus, newStatus, user, attachInvoice = false) => {
   try {
     // Get the customer's email
     let customerEmail = order.customerInfo?.email;
-    
+
     // If no email in customerInfo, try to get it from the customer reference
     if (!customerEmail && order.customer) {
       const customerUser = await User.findById(order.customer);
@@ -20,28 +22,28 @@ const sendOrderStatusNotification = async (order, previousStatus, newStatus, use
         customerEmail = customerUser.email;
       }
     }
-    
+
     if (!customerEmail) {
       console.error('Could not find customer email for order notification', order._id);
       return;
     }
-    
+
     // Create the email subject
     const subject = `Order Status Update: ${order._id}`;
-    
+
     // Create the email message based on the new status
     let message = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #333;">Order Status Update</h2>
         <p>Hello ${order.customerInfo?.name || 'Valued Customer'},</p>
         <p>Your order status has been updated.</p>
-        
+
         <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
           <p><strong>Order ID:</strong> ${order._id}</p>
           <p><strong>Previous Status:</strong> ${previousStatus}</p>
           <p><strong>New Status:</strong> <span style="color: ${getStatusColor(newStatus)}; font-weight: bold;">${newStatus}</span></p>
     `;
-    
+
     // Add status-specific information
     switch (newStatus) {
       case 'Approved':
@@ -74,11 +76,11 @@ const sendOrderStatusNotification = async (order, previousStatus, newStatus, use
           <p>Thank you for your order. We'll keep you updated on its progress.</p>
         `;
     }
-    
+
     // Add order summary
     message += `
         </div>
-        
+
         <h3 style="color: #333; margin-top: 30px;">Order Summary</h3>
         <table style="width: 100%; border-collapse: collapse;">
           <thead>
@@ -90,7 +92,7 @@ const sendOrderStatusNotification = async (order, previousStatus, newStatus, use
           </thead>
           <tbody>
     `;
-    
+
     // Add product rows
     order.products.forEach(item => {
       const productName = item.name || (item.product && item.product.name) || 'Product';
@@ -102,7 +104,7 @@ const sendOrderStatusNotification = async (order, previousStatus, newStatus, use
         </tr>
       `;
     });
-    
+
     // Add total
     message += `
           </tbody>
@@ -113,27 +115,50 @@ const sendOrderStatusNotification = async (order, previousStatus, newStatus, use
             </tr>
           </tfoot>
         </table>
-        
+
         <p style="margin-top: 30px;">Thank you for shopping with us!</p>
         <p>If you have any questions, please contact our customer support.</p>
-        
+
         <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #777;">
           <p>This is an automated email. Please do not reply to this message.</p>
         </div>
       </div>
     `;
-    
-    // Send the email
+
+    // Prepare attachments if needed
+    let attachments = [];
+
+    // For delivered orders, generate and attach invoice if requested
+    if (newStatus === 'Delivered' && attachInvoice) {
+      try {
+        console.log(`Generating invoice PDF for order ${order._id}`);
+        const pdfBuffer = await generateInvoicePDF(order);
+
+        attachments.push({
+          filename: `Invoice-${order._id}.pdf`,
+          content: pdfBuffer,
+          contentType: 'application/pdf'
+        });
+
+        console.log(`Invoice PDF generated and attached for order ${order._id}`);
+      } catch (invoiceError) {
+        console.error('Error generating invoice PDF:', invoiceError);
+        // Continue with email sending even if invoice generation fails
+      }
+    }
+
+    // Send the email with attachments if any
     await sendEmail(
       subject,
       message,
       customerEmail,
       process.env.EMAIL_USER || 'noreply@inventorymanager.com',
-      process.env.EMAIL_USER || 'noreply@inventorymanager.com'
+      process.env.EMAIL_USER || 'noreply@inventorymanager.com',
+      attachments
     );
-    
+
     console.log(`Order status notification sent to ${customerEmail} for order ${order._id}`);
-    
+
   } catch (error) {
     console.error('Error sending order status notification:', error);
   }

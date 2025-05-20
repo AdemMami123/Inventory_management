@@ -84,7 +84,7 @@ export default function DeliveredOrdersPage() {
       }
 
       const responseData = await response.json();
-      
+
       // Check if the response has a data property (new API format)
       if (responseData && responseData.data) {
         setOrders(responseData.data);
@@ -127,12 +127,55 @@ export default function DeliveredOrdersPage() {
     }
   };
 
+  const downloadInvoice = async (orderId: string) => {
+    try {
+      // Show loading toast
+      const loadingToast = toast.loading("Generating invoice...");
+
+      // Fetch the invoice as a blob
+      const response = await fetch(`http://localhost:5000/api/orders/${orderId}/invoice`, {
+        method: "GET",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to generate invoice");
+      }
+
+      // Convert response to blob
+      const blob = await response.blob();
+
+      // Create a URL for the blob
+      const url = window.URL.createObjectURL(blob);
+
+      // Create a temporary link element
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `Invoice-${orderId}.pdf`;
+
+      // Append to the document, click it, and remove it
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Clean up the URL
+      window.URL.revokeObjectURL(url);
+
+      // Dismiss loading toast and show success
+      toast.dismiss(loadingToast);
+      toast.success("Invoice downloaded successfully");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to download invoice";
+      toast.error(errorMessage);
+    }
+  };
+
   const filteredOrders = orders.filter(order => {
     const searchTermLower = searchQuery.toLowerCase();
     const customerName = order.customer?.name || order.customerInfo?.name || "";
     const customerEmail = order.customer?.email || order.customerInfo?.email || "";
     const trackingNumber = order.trackingNumber || "";
-    
+
     return (
       order._id.toLowerCase().includes(searchTermLower) ||
       customerName.toLowerCase().includes(searchTermLower) ||
@@ -241,7 +284,7 @@ export default function DeliveredOrdersPage() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => toast.success("Invoice downloaded")}
+                              onClick={() => downloadInvoice(order._id)}
                             >
                               <Download className="h-4 w-4 mr-1" />
                               Invoice

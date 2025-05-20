@@ -271,7 +271,7 @@ const getAllOrders = asyncHandler(async (req, res) => {
 // Get customer's own orders (for customers)
 const getCustomerOrders = asyncHandler(async (req, res) => {
   // Optional query parameters for filtering
-  const { status, sort = "-createdAt", limit = 20, page = 1 } = req.query;
+  const { status, startDate, endDate, search, sort = "-createdAt", limit = 20, page = 1 } = req.query;
 
   // Build filter object
   const filter = {};
@@ -285,14 +285,32 @@ const getCustomerOrders = asyncHandler(async (req, res) => {
       filter.status = status;
     }
 
+    // Filter by date range if provided
+    if (startDate || endDate) {
+      filter.createdAt = {};
+      if (startDate) filter.createdAt.$gte = new Date(startDate);
+      if (endDate) filter.createdAt.$lte = new Date(endDate);
+    }
+
+    // Search by product name or order ID
+    if (search) {
+      const searchRegex = new RegExp(search, 'i');
+      filter.$or = [
+        { _id: search.length === 24 ? search : null }, // Only if it's a valid ObjectId length
+        { 'products.name': searchRegex }
+      ];
+    }
+
     // Calculate pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     // Get total count for pagination
     const totalCount = await Order.countDocuments(filter);
 
+    // Get orders with detailed information
     const orders = await Order.find(filter)
       .populate("products.product", "name price image")
+      .populate("statusHistory.updatedBy", "name role")
       .sort(sort)
       .skip(skip)
       .limit(parseInt(limit));
@@ -300,13 +318,48 @@ const getCustomerOrders = asyncHandler(async (req, res) => {
     // Calculate total pages
     const totalPages = Math.ceil(totalCount / parseInt(limit));
 
+    // Get status counts for filtering UI
+    const statusCounts = await Order.aggregate([
+      { $match: { customer: req.user._id } },
+      { $group: { _id: "$status", count: { $sum: 1 } } }
+    ]);
+
+    // Format status counts
+    const formattedStatusCounts = {
+      Pending: 0,
+      Approved: 0,
+      Shipped: 0,
+      Delivered: 0,
+      Cancelled: 0
+    };
+
+    statusCounts.forEach(item => {
+      formattedStatusCounts[item._id] = item.count;
+    });
+
+    // Enhance orders with additional information
+    const enhancedOrders = orders.map(order => {
+      const daysSinceOrder = Math.floor((new Date() - new Date(order.createdAt)) / (1000 * 60 * 60 * 24));
+
+      return {
+        ...order._doc,
+        // Add computed fields for frontend use
+        canCancel: order.status === "Pending" || order.status === "Approved",
+        canReturn: order.status === "Delivered" && daysSinceOrder <= 14, // 14 days return policy
+        daysSinceOrder,
+        isRecentOrder: daysSinceOrder <= 30, // Flag for orders in the last 30 days
+        statusTimeline: generateStatusTimeline(order),
+      };
+    });
+
     return res.status(200).json({
       success: true,
       count: orders.length,
       totalCount,
       currentPage: parseInt(page),
       totalPages,
-      data: orders
+      statusCounts: formattedStatusCounts,
+      data: enhancedOrders
     });
   }
 
@@ -498,7 +551,17 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
   // Send notification email if status has changed
   if (previousStatus !== status) {
     try {
-      await sendOrderStatusNotification(populatedOrder, previousStatus, status, req.user);
+      // Attach invoice PDF for delivered orders
+      const attachInvoice = status === 'Delivered';
+
+      await sendOrderStatusNotification(
+        populatedOrder,
+        previousStatus,
+        status,
+        req.user,
+        attachInvoice
+      );
+
       console.log(`Notification sent for order ${order._id} status change: ${previousStatus} -> ${status}`);
     } catch (error) {
       console.error('Error sending order status notification:', error);

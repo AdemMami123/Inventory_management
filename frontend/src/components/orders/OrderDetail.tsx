@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "react-hot-toast";
+import { Download } from "lucide-react";
 
 interface Product {
   _id: string;
@@ -239,15 +240,67 @@ export default function OrderDetail({
     return userRole === "admin" || userRole === "manager";
   };
 
+  const downloadInvoice = async () => {
+    try {
+      // Show loading toast
+      const loadingToast = toast.loading("Generating invoice...");
+
+      // Fetch the invoice as a blob
+      const response = await fetch(`http://localhost:5000/api/orders/${order._id}/invoice`, {
+        method: "GET",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to generate invoice");
+      }
+
+      // Convert response to blob
+      const blob = await response.blob();
+
+      // Create a URL for the blob
+      const url = window.URL.createObjectURL(blob);
+
+      // Create a temporary link element
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `Invoice-${order._id}.pdf`;
+
+      // Append to the document, click it, and remove it
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Clean up the URL
+      window.URL.revokeObjectURL(url);
+
+      // Dismiss loading toast and show success
+      toast.dismiss(loadingToast);
+      toast.success("Invoice downloaded successfully");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to download invoice";
+      toast.error(errorMessage);
+    }
+  };
+
   return (
     <Card className="w-full">
       <CardHeader className="bg-gray-50 dark:bg-gray-800 flex flex-row items-center justify-between">
         <CardTitle className="text-xl font-semibold">Order Details</CardTitle>
-        {onClose && (
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            Close
-          </Button>
-        )}
+        <div className="flex gap-2">
+          {/* Only show invoice button for delivered orders */}
+          {order.status === "Delivered" && (
+            <Button variant="outline" size="sm" onClick={downloadInvoice}>
+              <Download className="h-4 w-4 mr-1" />
+              Invoice
+            </Button>
+          )}
+          {onClose && (
+            <Button variant="ghost" size="sm" onClick={onClose}>
+              Close
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="p-6 space-y-6">
         {/* Order Summary */}
