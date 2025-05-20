@@ -6,9 +6,10 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, ShoppingCart, Edit, AlertTriangle } from "lucide-react";
+import { ArrowLeft, ShoppingCart, Edit, AlertTriangle, History } from "lucide-react";
 import RoleIndicator from "@/components/common/RoleIndicator";
 import toast, { Toaster } from "react-hot-toast";
+import ProductHistorySection from "@/components/products/ProductHistorySection";
 
 interface Product {
   _id: string;
@@ -169,7 +170,7 @@ export default function ProductDetails() {
   return (
     <div className="container mx-auto py-10 px-4">
       <Toaster position="top-right" reverseOrder={false} />
-      
+
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <Button variant="ghost" onClick={handleGoBack} className="flex items-center gap-2">
@@ -178,7 +179,7 @@ export default function ProductDetails() {
           </Button>
           <RoleIndicator showLabel={true} />
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-md">
             {product.image?.filePath ? (
@@ -196,14 +197,14 @@ export default function ProductDetails() {
               </div>
             )}
           </div>
-          
+
           <div>
             <h1 className="text-2xl font-bold mb-2">{product.name}</h1>
             <div className="flex items-center gap-2 mb-4">
               <Badge variant="secondary">{product.category}</Badge>
               <span className="text-sm text-gray-500">SKU: {product.sku}</span>
             </div>
-            
+
             <div className="mb-4">
               <p className="text-2xl font-bold text-primary">${Number(product.price).toFixed(2)}</p>
               <p className="text-sm mt-1">
@@ -216,25 +217,25 @@ export default function ProductDetails() {
                 )}
               </p>
             </div>
-            
+
             <div className="mb-6">
               <h2 className="text-lg font-semibold mb-2">Description</h2>
               <p className="text-gray-700 dark:text-gray-300">{product.description}</p>
             </div>
-            
+
             <div className="flex gap-4">
-              <Button 
-                onClick={handleOrder} 
+              <Button
+                onClick={handleOrder}
                 className="flex items-center gap-2"
                 disabled={product.quantity <= 0}
               >
                 <ShoppingCart className="h-4 w-4" />
                 Order Now
               </Button>
-              
+
               {isStaff && (
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={handleEdit}
                   className="flex items-center gap-2"
                 >
@@ -245,6 +246,30 @@ export default function ProductDetails() {
             </div>
           </div>
         </div>
+
+        {/* Product History Section (Admin/Manager only) */}
+        {isStaff && (
+          <div className="mt-8">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                  <History className="h-5 w-5" />
+                  Product History
+                </CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => router.push(`/product/history?productId=${product._id}`)}
+                >
+                  View Full History
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <ProductHistorySection productId={product._id} limit={5} />
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
     </div>
   );

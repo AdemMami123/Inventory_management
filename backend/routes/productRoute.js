@@ -10,6 +10,10 @@ const {
   deleteProduct,
   updateProduct,
 } = require("../controllers/productController");
+const {
+  getProductHistory,
+  getAllProductHistory
+} = require("../controllers/productHistoryController");
 const { upload } = require("../utils/fileUpload");
 
 // Public route - Get all products (no authentication required)
@@ -36,6 +40,14 @@ router.patch("/:id",
 // Both customers and staff can view products
 router.get("/", verifyToken, getProducts);
 
+// Get all product history (Admin and Manager only)
+// This route must come before the /:id routes to avoid conflicts
+router.get("/history/all",
+  verifyToken,
+  verifyRole("admin", "manager"),
+  getAllProductHistory
+);
+
 // All authenticated users - Get single product
 // Both customers and staff can view a single product
 router.get("/:id", verifyToken, getProduct);
@@ -45,6 +57,13 @@ router.delete("/:id",
   verifyToken,
   verifyRole("admin", "manager"),
   deleteProduct
+);
+
+// Get history for a specific product (Admin and Manager only)
+router.get("/:id/history",
+  verifyToken,
+  verifyRole("admin", "manager"),
+  getProductHistory
 );
 
 module.exports = router;

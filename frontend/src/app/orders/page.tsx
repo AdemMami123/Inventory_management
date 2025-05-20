@@ -30,7 +30,7 @@ interface OrderCounts {
   approved: number;
   shipped: number;
   delivered: number;
-  declined: number;
+  cancelled: number;
 }
 
 export default function OrdersPage() {
@@ -40,7 +40,7 @@ export default function OrdersPage() {
     approved: 0,
     shipped: 0,
     delivered: 0,
-    declined: 0
+    cancelled: 0
   });
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string>("customer"); // Default to customer
@@ -137,7 +137,7 @@ export default function OrdersPage() {
         approved: orders.filter((o: any) => o.status === "Approved").length,
         shipped: orders.filter((o: any) => o.status === "Shipped").length,
         delivered: orders.filter((o: any) => o.status === "Delivered").length,
-        declined: orders.filter((o: any) => o.status === "Cancelled").length
+        cancelled: orders.filter((o: any) => o.status === "Cancelled").length
       };
 
       setOrderCounts(counts);
@@ -152,7 +152,7 @@ export default function OrdersPage() {
         approved: 0,
         shipped: 0,
         delivered: 0,
-        declined: 0
+        cancelled: 0
       });
     } finally {
       setLoading(false);
@@ -190,7 +190,7 @@ export default function OrdersPage() {
           </div>
 
           {/* Order Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
@@ -203,34 +203,111 @@ export default function OrdersPage() {
                 <p className="text-xs text-muted-foreground">
                   All orders in the system
                 </p>
+                {(userRole === "admin" || userRole === "manager") && (
+                  <Button
+                    variant="link"
+                    className="px-0 text-xs"
+                    onClick={() => navigateTo("/orders/manage")}
+                  >
+                    View all
+                  </Button>
+                )}
               </CardContent>
             </Card>
-            <Card>
+
+            <Card className="bg-yellow-50 dark:bg-yellow-900/20">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Pending Orders</CardTitle>
-                <Clock className="h-4 w-4 text-muted-foreground" />
+                <Clock className="h-4 w-4 text-yellow-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
+                <div className="text-2xl font-bold text-yellow-700 dark:text-yellow-500">
                   {loading ? "..." : orderCounts.pending}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Orders awaiting approval
                 </p>
+                {(userRole === "admin" || userRole === "manager") && (
+                  <Button
+                    variant="link"
+                    className="px-0 text-xs text-yellow-700 dark:text-yellow-500"
+                    onClick={() => navigateTo("/orders/pending")}
+                  >
+                    Manage pending
+                  </Button>
+                )}
               </CardContent>
             </Card>
-            <Card>
+
+            <Card className="bg-blue-50 dark:bg-blue-900/20">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Shipped Orders</CardTitle>
-                <TruckIcon className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">Approved Orders</CardTitle>
+                <CheckCircle className="h-4 w-4 text-blue-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
+                <div className="text-2xl font-bold text-blue-700 dark:text-blue-500">
+                  {loading ? "..." : orderCounts.approved}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Orders ready to ship
+                </p>
+                {(userRole === "admin" || userRole === "manager") && (
+                  <Button
+                    variant="link"
+                    className="px-0 text-xs text-blue-700 dark:text-blue-500"
+                    onClick={() => navigateTo("/orders/approved")}
+                  >
+                    Manage approved
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="bg-purple-50 dark:bg-purple-900/20">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Shipped Orders</CardTitle>
+                <TruckIcon className="h-4 w-4 text-purple-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-purple-700 dark:text-purple-500">
                   {loading ? "..." : orderCounts.shipped}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Orders in transit to customers
+                  Orders in transit
                 </p>
+                {(userRole === "admin" || userRole === "manager") && (
+                  <Button
+                    variant="link"
+                    className="px-0 text-xs text-purple-700 dark:text-purple-500"
+                    onClick={() => navigateTo("/orders/shipped")}
+                  >
+                    Track shipments
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="bg-red-50 dark:bg-red-900/20">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Cancelled Orders</CardTitle>
+                <XCircle className="h-4 w-4 text-red-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-red-700 dark:text-red-500">
+                  {loading ? "..." : orderCounts.cancelled}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Cancelled orders
+                </p>
+                {(userRole === "admin" || userRole === "manager") && (
+                  <Button
+                    variant="link"
+                    className="px-0 text-xs text-red-700 dark:text-red-500"
+                    onClick={() => navigateTo("/orders/cancelled")}
+                  >
+                    View cancelled
+                  </Button>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -252,6 +329,7 @@ export default function OrdersPage() {
                 <ShoppingCart className="h-8 w-8 mb-2" />
                 <span>Create New Order</span>
               </Button>
+
               <Button
                 variant="outline"
                 className="h-24 flex flex-col items-center justify-center"
@@ -260,6 +338,29 @@ export default function OrdersPage() {
                 <Clock className="h-8 w-8 mb-2" />
                 <span>View Order History</span>
               </Button>
+
+              {(userRole === "admin" || userRole === "manager") && (
+                <Button
+                  variant="outline"
+                  className="h-24 flex flex-col items-center justify-center"
+                  onClick={() => navigateTo("/orders/pending")}
+                >
+                  <Clock className="h-8 w-8 mb-2 text-yellow-500" />
+                  <span>Pending Orders</span>
+                </Button>
+              )}
+
+              {(userRole === "admin" || userRole === "manager") && (
+                <Button
+                  variant="outline"
+                  className="h-24 flex flex-col items-center justify-center"
+                  onClick={() => navigateTo("/orders/shipped")}
+                >
+                  <TruckIcon className="h-8 w-8 mb-2 text-purple-500" />
+                  <span>Track Shipments</span>
+                </Button>
+              )}
+
               {(userRole === "admin" || userRole === "manager" || userRole === "employee") && (
                 <Button
                   variant="outline"
@@ -267,9 +368,10 @@ export default function OrdersPage() {
                   onClick={() => navigateTo("/orders/manage")}
                 >
                   <Package className="h-8 w-8 mb-2" />
-                  <span>Manage Orders</span>
+                  <span>All Orders</span>
                 </Button>
               )}
+
               {(userRole === "admin" || userRole === "manager") && (
                 <Button
                   variant="outline"

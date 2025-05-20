@@ -17,17 +17,13 @@ export function NavigationMenuDemo() {
       <NavigationMenu className="flex justify-end space-x-4">
         <NavigationMenuList className="flex items-center space-x-4">
           <NavigationMenuItem>
-            <Link href="/login" legacyBehavior passHref>
-              <NavigationMenuLink className={`${navigationMenuTriggerStyle()} px-4`}>
-                Login
-              </NavigationMenuLink>
+            <Link href="/login" className={`${navigationMenuTriggerStyle()} px-4`}>
+              Login
             </Link>
           </NavigationMenuItem>
           <NavigationMenuItem>
-            <Link href="/register" legacyBehavior passHref>
-              <NavigationMenuLink className={`${navigationMenuTriggerStyle()} px-4`}>
-                Register
-              </NavigationMenuLink>
+            <Link href="/register" className={`${navigationMenuTriggerStyle()} px-4`}>
+              Register
             </Link>
           </NavigationMenuItem>
           <NavigationMenuItem>

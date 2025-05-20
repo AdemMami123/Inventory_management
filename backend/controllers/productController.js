@@ -2,6 +2,7 @@ const asyncHandler = require("express-async-handler");
 const Product = require("../models/product");
 const { fileSizeFormatter } = require("../utils/fileUpload");
 const path = require("path");
+const { recordProductHistory } = require("./productHistoryController");
 
 
 // Create Prouct
@@ -38,6 +39,24 @@ const createProduct = asyncHandler(async (req, res) => {
     description,
     image: fileData,
   });
+
+  // Record product creation in history
+  await recordProductHistory(
+    product._id,
+    req.user.id,
+    "created",
+    "product",
+    null,
+    {
+      name,
+      sku,
+      category,
+      quantity,
+      price,
+      description
+    },
+    "Product created"
+  );
 
   res.status(201).json(product);
 });
@@ -94,6 +113,24 @@ const deleteProduct = asyncHandler(async (req, res) => {
     throw new Error("User not authorized");
   }
 
+  // Record product deletion in history
+  await recordProductHistory(
+    req.params.id,
+    req.user.id,
+    "deleted",
+    "product",
+    {
+      name: product.name,
+      sku: product.sku,
+      category: product.category,
+      quantity: product.quantity,
+      price: product.price,
+      description: product.description
+    },
+    null,
+    "Product deleted"
+  );
+
   // Delete the product
   await Product.deleteOne({ _id: req.params.id });
 
@@ -132,6 +169,54 @@ const updateProduct = asyncHandler(async (req, res) => {
      };
    }
 
+  // Track changes for history
+  const changes = [];
+
+  if (name !== product.name) {
+    changes.push({
+      field: "name",
+      previousValue: product.name,
+      newValue: name,
+      changeType: "information"
+    });
+  }
+
+  if (category !== product.category) {
+    changes.push({
+      field: "category",
+      previousValue: product.category,
+      newValue: category,
+      changeType: "information"
+    });
+  }
+
+  if (quantity !== product.quantity) {
+    changes.push({
+      field: "quantity",
+      previousValue: product.quantity,
+      newValue: quantity,
+      changeType: "quantity"
+    });
+  }
+
+  if (price !== product.price) {
+    changes.push({
+      field: "price",
+      previousValue: product.price,
+      newValue: price,
+      changeType: "price"
+    });
+  }
+
+  if (description !== product.description) {
+    changes.push({
+      field: "description",
+      previousValue: product.description,
+      newValue: description,
+      changeType: "information"
+    });
+  }
+
   // Update Product
   const updatedProduct = await Product.findByIdAndUpdate(
     { _id: id },
@@ -148,6 +233,31 @@ const updateProduct = asyncHandler(async (req, res) => {
       runValidators: true,
     }
   );
+
+  // Record history for each change
+  for (const change of changes) {
+    await recordProductHistory(
+      id,
+      req.user.id,
+      change.changeType,
+      change.field,
+      change.previousValue,
+      change.newValue
+    );
+  }
+
+  // Record image change if applicable
+  if (Object.keys(fileData).length > 0) {
+    await recordProductHistory(
+      id,
+      req.user.id,
+      "information",
+      "image",
+      product.image,
+      fileData,
+      "Image updated"
+    );
+  }
 
   res.status(200).json(updatedProduct);
 });
