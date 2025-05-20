@@ -27,11 +27,11 @@ export function NavigationMenuDemo() {
         });
 
         if (response.ok) {
-          const data = await response.json();
-          setIsLoggedIn(data.status);
+          const isLoggedIn = await response.json();
+          setIsLoggedIn(isLoggedIn);
 
           // If logged in, get user role
-          if (data.status) {
+          if (isLoggedIn) {
             const userResponse = await fetch("http://localhost:5000/api/users/getuser", {
               method: "GET",
               credentials: "include",

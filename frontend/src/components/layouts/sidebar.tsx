@@ -111,7 +111,12 @@ const SidebarContent = () => {
 
   return (
     <nav className="flex flex-col space-y-1">
-      <SidebarItem icon={Home} text="Dashboard" link="/" active={pathname === '/'} />
+      <SidebarItem
+        icon={Home}
+        text="Dashboard"
+        link={isStaff ? "/dashboard/admin" : "/dashboard/customer"}
+        active={pathname === '/' || pathname?.includes('/dashboard')}
+      />
 
       {/* Products Menu */}
       <div>

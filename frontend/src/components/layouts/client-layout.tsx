@@ -14,12 +14,36 @@ export default function ClientLayout({
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const { theme } = useTheme();
 
   // Only render UI after component is mounted to prevent hydration mismatch
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Check if user is logged in
+  useEffect(() => {
+    const checkLoginStatus = async () => {
+      if (!mounted) return;
+
+      try {
+        const response = await fetch("http://localhost:5000/api/users/loggedin", {
+          method: "GET",
+          credentials: "include",
+        });
+
+        if (response.ok) {
+          const isLoggedIn = await response.json();
+          setIsLoggedIn(isLoggedIn);
+        }
+      } catch (error) {
+        console.error("Error checking login status:", error);
+      }
+    };
+
+    checkLoginStatus();
+  }, [mounted]);
 
   // If not mounted yet, render a simple layout to prevent hydration errors
   if (!mounted) {
@@ -52,20 +76,22 @@ export default function ClientLayout({
       )}
 
       <div className="flex flex-col flex-1">
-        {/* Navbar - Includes menu button for mobile */}
-        <header className="sticky top-0 z-40 flex items-center h-16 px-4 bg-white shadow-md md:px-6 dark:bg-gray-900">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-          >
-            <Menu size={24} />
-          </Button>
-          <div className="flex-1">
-            <NavigationMenuDemo />
-          </div>
-        </header>
+        {/* Navbar - Includes menu button for mobile - Only shown when not logged in */}
+        {!isLoggedIn && (
+          <header className="sticky top-0 z-40 flex items-center h-16 px-4 bg-white shadow-md md:px-6 dark:bg-gray-900">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+            >
+              <Menu size={24} />
+            </Button>
+            <div className="flex-1">
+              <NavigationMenuDemo />
+            </div>
+          </header>
+        )}
 
         {/* Main Content */}
         <main className="flex-1 p-4 md:p-6 overflow-auto">{children}</main>
