@@ -303,7 +303,7 @@ export default function InventoryReportTab() {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${inventoryData.inventoryStats.totalValue.toFixed(2)}</div>
+              <div className="text-2xl font-bold">${typeof inventoryData.inventoryStats.totalValue === 'number' ? inventoryData.inventoryStats.totalValue.toFixed(2) : Number(inventoryData.inventoryStats.totalValue || 0).toFixed(2)}</div>
               <p className="text-xs text-muted-foreground">
                 Total value of inventory
               </p>
@@ -400,7 +400,7 @@ export default function InventoryReportTab() {
                       <TableCell>{product.name}</TableCell>
                       <TableCell>{product.category}</TableCell>
                       <TableCell>{product.sku}</TableCell>
-                      <TableCell className="text-right">${product.price.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">${typeof product.price === 'number' ? product.price.toFixed(2) : Number(product.price || 0).toFixed(2)}</TableCell>
                       <TableCell className="text-right">
                         <span className={product.quantity <= 5 ? 'text-red-500 font-bold' : 'text-yellow-500'}>
                           {product.quantity}
@@ -461,7 +461,7 @@ export default function InventoryReportTab() {
                       <TableCell>{product.name}</TableCell>
                       <TableCell>{product.category}</TableCell>
                       <TableCell>{product.sku}</TableCell>
-                      <TableCell className="text-right">${product.price.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">${typeof product.price === 'number' ? product.price.toFixed(2) : Number(product.price || 0).toFixed(2)}</TableCell>
                       <TableCell className="text-right">
                         <span className={product.quantity <= lowStockThreshold ? 'text-yellow-500' : ''}>
                           {product.quantity}

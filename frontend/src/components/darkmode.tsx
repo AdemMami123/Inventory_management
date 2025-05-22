@@ -11,15 +11,30 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useSettings } from "@/contexts/SettingsContext"
 
 export function ModeToggle() {
   const { theme, setTheme } = useTheme()
+  const { settings, updateSettings } = useSettings()
   const [mounted, setMounted] = React.useState(false)
 
   // Only show the toggle after mounting to avoid hydration mismatch
   React.useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Sync theme with settings when mounted
+  React.useEffect(() => {
+    if (mounted && settings.theme) {
+      setTheme(settings.theme)
+    }
+  }, [mounted, settings.theme, setTheme])
+
+  // Handle theme change
+  const handleThemeChange = (newTheme: 'light' | 'dark' | 'system') => {
+    setTheme(newTheme)
+    updateSettings({ theme: newTheme })
+  }
 
   if (!mounted) {
     return (
@@ -39,13 +54,13 @@ export function ModeToggle() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => setTheme("light")}>
+        <DropdownMenuItem onClick={() => handleThemeChange("light")}>
           Light
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("dark")}>
+        <DropdownMenuItem onClick={() => handleThemeChange("dark")}>
           Dark
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("system")}>
+        <DropdownMenuItem onClick={() => handleThemeChange("system")}>
           System
         </DropdownMenuItem>
       </DropdownMenuContent>

@@ -359,7 +359,7 @@ export default function ProductsReportTab() {
                       <TableCell>{product.sku}</TableCell>
                       <TableCell className="text-right">${typeof product.price === 'number' ? product.price.toFixed(2) : Number(product.price || 0).toFixed(2)}</TableCell>
                       <TableCell className="text-right">{product.totalQuantity}</TableCell>
-                      <TableCell className="text-right">${product.totalRevenue.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">${typeof product.totalRevenue === 'number' ? product.totalRevenue.toFixed(2) : Number(product.totalRevenue || 0).toFixed(2)}</TableCell>
                       <TableCell className="text-right">{product.orderCount}</TableCell>
                     </TableRow>
                   ))}
@@ -470,9 +470,9 @@ export default function ProductsReportTab() {
                       <TableCell className="font-medium">{category._id || 'Uncategorized'}</TableCell>
                       <TableCell className="text-right">{category.productCount}</TableCell>
                       <TableCell className="text-right">{category.totalQuantity}</TableCell>
-                      <TableCell className="text-right">${category.totalRevenue.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">${typeof category.totalRevenue === 'number' ? category.totalRevenue.toFixed(2) : Number(category.totalRevenue || 0).toFixed(2)}</TableCell>
                       <TableCell className="text-right">{category.orderCount}</TableCell>
-                      <TableCell className="text-right">${category.averageRevenuePerProduct.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">${typeof category.averageRevenuePerProduct === 'number' ? category.averageRevenuePerProduct.toFixed(2) : Number(category.averageRevenuePerProduct || 0).toFixed(2)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -522,9 +522,9 @@ export default function ProductsReportTab() {
                       <TableCell>{product.sku}</TableCell>
                       <TableCell className="text-right">${typeof product.price === 'number' ? product.price.toFixed(2) : Number(product.price || 0).toFixed(2)}</TableCell>
                       <TableCell className="text-right">{product.totalQuantity}</TableCell>
-                      <TableCell className="text-right">${product.totalRevenue.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">${typeof product.totalRevenue === 'number' ? product.totalRevenue.toFixed(2) : Number(product.totalRevenue || 0).toFixed(2)}</TableCell>
                       <TableCell className="text-right">{product.orderCount}</TableCell>
-                      <TableCell className="text-right">{product.averageOrderQuantity.toFixed(1)}</TableCell>
+                      <TableCell className="text-right">{typeof product.averageOrderQuantity === 'number' ? product.averageOrderQuantity.toFixed(1) : Number(product.averageOrderQuantity || 0).toFixed(1)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

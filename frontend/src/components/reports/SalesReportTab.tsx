@@ -372,9 +372,9 @@ export default function SalesReportTab() {
                   {salesData.salesData.map((item, index) => (
                     <TableRow key={index}>
                       <TableCell>{item.label}</TableCell>
-                      <TableCell className="text-right">${item.totalSales.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">${typeof item.totalSales === 'number' ? item.totalSales.toFixed(2) : Number(item.totalSales || 0).toFixed(2)}</TableCell>
                       <TableCell className="text-right">{item.orderCount}</TableCell>
-                      <TableCell className="text-right">${item.averageOrderValue.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">${typeof item.averageOrderValue === 'number' ? item.averageOrderValue.toFixed(2) : Number(item.averageOrderValue || 0).toFixed(2)}</TableCell>
                       <TableCell className="text-right">{item.productCount}</TableCell>
                     </TableRow>
                   ))}

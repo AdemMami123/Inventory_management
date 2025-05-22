@@ -1,6 +1,7 @@
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import ClientLayout from "@/components/layouts/client-layout";
+import { SettingsProvider } from "@/contexts/SettingsContext";
 
 export const metadata = {
   title: "Inventory Management System",
@@ -18,7 +19,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           enableSystem
           disableTransitionOnChange
         >
-          <ClientLayout>{children}</ClientLayout>
+          <SettingsProvider>
+            <ClientLayout>{children}</ClientLayout>
+          </SettingsProvider>
         </ThemeProvider>
       </body>
     </html>

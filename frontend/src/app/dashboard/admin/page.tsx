@@ -54,6 +54,7 @@ interface OrderStats {
   cancelled: number;
   totalSales: number;
   dailySales: number;
+  dailySalesChange: number;
   weeklySales: number;
   monthlySales: number;
 }
@@ -87,6 +88,7 @@ export default function AdminDashboard() {
     cancelled: 0,
     totalSales: 0,
     dailySales: 0,
+    dailySalesChange: 0,
     weeklySales: 0,
     monthlySales: 0,
   });
@@ -122,18 +124,63 @@ export default function AdminDashboard() {
 
         if (response.ok) {
           const data = await response.json();
-          setOrderStats(data.data || {
-            total: 0,
-            pending: 0,
-            approved: 0,
-            shipped: 0,
-            delivered: 0,
-            cancelled: 0,
-            totalSales: 0,
-            dailySales: 0,
-            weeklySales: 0,
-            monthlySales: 0,
-          });
+
+          if (data.success && data.data) {
+            // Get today's date
+            const today = new Date().toISOString().split('T')[0];
+            const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+
+            // Find today's and yesterday's sales from ordersByDate
+            console.log('Today:', today, 'Yesterday:', yesterday);
+            console.log('Orders by date:', data.data.ordersByDate);
+
+            const todaySales = data.data.ordersByDate?.find(item => item._id === today)?.revenue || 0;
+            const yesterdaySales = data.data.ordersByDate?.find(item => item._id === yesterday)?.revenue || 0;
+
+            console.log('Today sales:', todaySales, 'Yesterday sales:', yesterdaySales);
+
+            // Calculate daily sales change percentage
+            const dailySalesChange = yesterdaySales > 0
+              ? ((todaySales - yesterdaySales) / yesterdaySales) * 100
+              : (todaySales > 0 ? 100 : 0);
+
+            // Calculate weekly and monthly sales
+            const last7Days = data.data.ordersByDate
+              ?.filter(item => new Date(item._id) >= new Date(Date.now() - 7 * 86400000))
+              ?.reduce((sum, item) => sum + item.revenue, 0) || 0;
+
+            const last30Days = data.data.ordersByDate
+              ?.filter(item => new Date(item._id) >= new Date(Date.now() - 30 * 86400000))
+              ?.reduce((sum, item) => sum + item.revenue, 0) || 0;
+
+            setOrderStats({
+              total: data.data.totalOrders || 0,
+              pending: data.data.statusCounts?.Pending || 0,
+              approved: data.data.statusCounts?.Approved || 0,
+              shipped: data.data.statusCounts?.Shipped || 0,
+              delivered: data.data.statusCounts?.Delivered || 0,
+              cancelled: data.data.statusCounts?.Cancelled || 0,
+              totalSales: data.data.totalRevenue || 0,
+              dailySales: todaySales,
+              dailySalesChange: dailySalesChange,
+              weeklySales: last7Days,
+              monthlySales: last30Days
+            });
+          } else {
+            setOrderStats({
+              total: 0,
+              pending: 0,
+              approved: 0,
+              shipped: 0,
+              delivered: 0,
+              cancelled: 0,
+              totalSales: 0,
+              dailySales: 0,
+              dailySalesChange: 0,
+              weeklySales: 0,
+              monthlySales: 0,
+            });
+          }
         }
       } catch (error) {
         console.error("Error fetching order stats:", error);
@@ -279,9 +326,13 @@ export default function AdminDashboard() {
                 <div className="text-2xl font-bold">
                   {formatCurrency(orderStats.dailySales || 0)}
                 </div>
-                <div className="flex items-center text-xs text-green-500">
-                  <ArrowUp className="h-3 w-3 mr-1" />
-                  <span>+12.5% from yesterday</span>
+                <div className={`flex items-center text-xs ${orderStats.dailySalesChange >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {orderStats.dailySalesChange >= 0 ? (
+                    <ArrowUp className="h-3 w-3 mr-1" />
+                  ) : (
+                    <ArrowDown className="h-3 w-3 mr-1" />
+                  )}
+                  <span>{orderStats.dailySalesChange >= 0 ? '+' : ''}{orderStats.dailySalesChange.toFixed(1)}% from yesterday</span>
                 </div>
               </CardContent>
             </Card>

@@ -659,12 +659,19 @@ const getOrderStats = asyncHandler(async (req, res) => {
     { $group: { _id: null, totalRevenue: { $sum: "$totalAmount" } } }
   ]);
 
+  console.log("Revenue stats:", revenueStats);
+
   // Get orders by date (last 30 days)
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
   const ordersByDate = await Order.aggregate([
-    { $match: { createdAt: { $gte: thirtyDaysAgo } } },
+    {
+      $match: {
+        createdAt: { $gte: thirtyDaysAgo },
+        paymentStatus: "Paid"  // Only include paid orders in revenue calculations
+      }
+    },
     {
       $group: {
         _id: {
@@ -676,6 +683,8 @@ const getOrderStats = asyncHandler(async (req, res) => {
     },
     { $sort: { _id: 1 } }
   ]);
+
+  console.log("Orders by date:", ordersByDate);
 
   // Format the status counts into a more usable object
   const formattedStatusCounts = {};

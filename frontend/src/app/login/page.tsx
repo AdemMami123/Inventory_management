@@ -155,7 +155,7 @@ const Login = () => {
           <div className="bg-gradient-to-r from-transparent via-neutral-300 dark:via-neutral-700 to-transparent my-6 h-[1px] w-full" />
 
           <div className="text-center text-sm text-gray-600 dark:text-gray-400">
-            Don't have an account?{" "}
+            Dont have an account?{" "}
             <Link href="/register" className="text-blue-600 hover:underline dark:text-blue-400">
               Sign up
             </Link>
@@ -166,14 +166,7 @@ const Login = () => {
   );
 };
 
-const BottomGradient = () => {
-  return (
-    <>
-      <span className="group-hover/btn:opacity-100 block transition duration-500 opacity-0 absolute h-px w-full -bottom-px inset-x-0 bg-gradient-to-r from-transparent via-cyan-500 to-transparent" />
-      <span className="group-hover/btn:opacity-100 blur-sm block transition duration-500 opacity-0 absolute h-px w-1/2 mx-auto -bottom-px inset-x-10 bg-gradient-to-r from-transparent via-indigo-500 to-transparent" />
-    </>
-  );
-};
+
 
 const LabelInputContainer = ({
   children,

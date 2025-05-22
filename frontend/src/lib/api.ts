@@ -193,3 +193,17 @@ export const usersApi = {
       method: 'GET',
     }),
 };
+
+// Settings API functions
+export const settingsApi = {
+  getSettings: () =>
+    apiRequest('/api/settings', {
+      method: 'GET',
+    }),
+
+  updateSettings: (settingsData: any) =>
+    apiRequest('/api/settings', {
+      method: 'PATCH',
+      body: JSON.stringify(settingsData),
+    }),
+};
