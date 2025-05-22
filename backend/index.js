@@ -6,6 +6,7 @@ const mongoose = require("mongoose");
 const userRoutes = require('./routes/userRoutes');
 const productRoute = require('./routes/productRoute');
 const orderRoute = require('./routes/orderRoute');
+const reportsRoute = require('./routes/reportsRoute');
 const errorHandler = require('./middleware/errorMiddleware');
 const cookieParser = require('cookie-parser');
 const cors = require("cors");
@@ -42,6 +43,7 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads"))); // ✅ Fix
 app.use("/api/users", userRoutes);
 app.use("/api/products", productRoute);
 app.use("/api/orders", orderRoute);
+app.use("/api/reports", reportsRoute);
 
 // Test route
 app.get("/", (req, res) => {

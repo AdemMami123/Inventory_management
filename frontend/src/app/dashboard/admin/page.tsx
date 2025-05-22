@@ -43,6 +43,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import SalesChart from "@/components/dashboard/SalesChart";
 
 interface OrderStats {
   total: number;
@@ -220,17 +221,9 @@ export default function AdminDashboard() {
     }
   };
 
-  // Mock data for sales chart (in a real app, this would come from the API)
-  const salesData = {
-    daily: [
-      { day: "Mon", sales: 1200 },
-      { day: "Tue", sales: 1800 },
-      { day: "Wed", sales: 1400 },
-      { day: "Thu", sales: 2200 },
-      { day: "Fri", sales: 2600 },
-      { day: "Sat", sales: 1900 },
-      { day: "Sun", sales: 1300 },
-    ],
+  // Refresh handler for sales chart
+  const handleRefreshSales = () => {
+    toast.success("Sales data refreshed");
   };
 
   return (
@@ -331,39 +324,7 @@ export default function AdminDashboard() {
           {/* Main Content */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Sales Chart */}
-            <Card className="md:col-span-2">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Sales Overview</CardTitle>
-                  <Tabs defaultValue="daily">
-                    <TabsList className="grid w-full grid-cols-3">
-                      <TabsTrigger value="daily">Daily</TabsTrigger>
-                      <TabsTrigger value="weekly">Weekly</TabsTrigger>
-                      <TabsTrigger value="monthly">Monthly</TabsTrigger>
-                    </TabsList>
-                  </Tabs>
-                </div>
-                <CardDescription>
-                  Sales performance over time
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {/* This would be a real chart component in a production app */}
-                <div className="h-[200px] w-full">
-                  <div className="flex h-full items-end gap-2">
-                    {salesData.daily.map((item, index) => (
-                      <div key={index} className="relative flex h-full w-full flex-col justify-end">
-                        <div
-                          className="bg-primary rounded-md w-full"
-                          style={{ height: `${(item.sales / 3000) * 100}%` }}
-                        ></div>
-                        <span className="mt-1 text-xs text-center">{item.day}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <SalesChart isLoading={loading} onRefresh={handleRefreshSales} />
 
             {/* Low Stock Products */}
             <Card>

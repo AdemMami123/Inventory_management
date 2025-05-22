@@ -13,7 +13,11 @@ import {
 import { ModeToggle } from "../darkmode";
 import OrderNotifications from "../notifications/OrderNotifications";
 
-export function NavigationMenuDemo() {
+interface NavigationMenuDemoProps {
+  showMinimal?: boolean;
+}
+
+export function NavigationMenuDemo({ showMinimal = false }: NavigationMenuDemoProps) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
 
@@ -52,9 +56,69 @@ export function NavigationMenuDemo() {
   }, []);
 
   return (
-    <nav className="bg-gray-900 w-full p-4">
-      <NavigationMenu className="flex justify-end space-x-4">
-        <NavigationMenuList className="flex items-center space-x-4">
+    <nav className="w-full p-4">
+      <NavigationMenu className="flex justify-between w-full">
+        {/* Left side - Brand and main navigation (only shown in full mode) */}
+        {!showMinimal && (
+          <div className="flex items-center">
+            <NavigationMenuList className="flex items-center space-x-4">
+              <NavigationMenuItem>
+                <Link href="/" className="text-lg font-bold">
+                  Inventory Manager
+                </Link>
+              </NavigationMenuItem>
+
+              {isLoggedIn && (
+                <>
+                  {/* Dashboard link based on role */}
+                  <NavigationMenuItem>
+                    <Link
+                      href={userRole === 'customer' ? "/dashboard/customer" : "/dashboard/admin"}
+                      className={`${navigationMenuTriggerStyle()} px-4`}
+                    >
+                      Dashboard
+                    </Link>
+                  </NavigationMenuItem>
+
+                  {/* Admin/Manager specific links */}
+                  {(userRole === 'admin' || userRole === 'manager') && (
+                    <>
+                      <NavigationMenuItem>
+                        <Link href="/product/viewProducts" className={`${navigationMenuTriggerStyle()} px-4`}>
+                          Products
+                        </Link>
+                      </NavigationMenuItem>
+                      <NavigationMenuItem>
+                        <Link href="/orders/manage" className={`${navigationMenuTriggerStyle()} px-4`}>
+                          Orders
+                        </Link>
+                      </NavigationMenuItem>
+                    </>
+                  )}
+
+                  {/* Customer specific links */}
+                  {userRole === 'customer' && (
+                    <>
+                      <NavigationMenuItem>
+                        <Link href="/product/viewProducts" className={`${navigationMenuTriggerStyle()} px-4`}>
+                          Shop
+                        </Link>
+                      </NavigationMenuItem>
+                      <NavigationMenuItem>
+                        <Link href="/orders/history" className={`${navigationMenuTriggerStyle()} px-4`}>
+                          My Orders
+                        </Link>
+                      </NavigationMenuItem>
+                    </>
+                  )}
+                </>
+              )}
+            </NavigationMenuList>
+          </div>
+        )}
+
+        {/* Right side - User actions */}
+        <NavigationMenuList className={`flex items-center space-x-4 ${showMinimal ? 'ml-auto' : ''}`}>
           {isLoggedIn ? (
             // Logged in navigation items
             <>
@@ -64,26 +128,39 @@ export function NavigationMenuDemo() {
                   <OrderNotifications />
                 </NavigationMenuItem>
               )}
+
+              {/* Profile link */}
               <NavigationMenuItem>
-                <Link href="/logout" className={`${navigationMenuTriggerStyle()} px-4`}>
-                  Logout
+                <Link href="/profile" className={`${navigationMenuTriggerStyle()} px-4`}>
+                  Profile
                 </Link>
               </NavigationMenuItem>
+
+              {/* Logout link (only shown in full mode) */}
+              {!showMinimal && (
+                <NavigationMenuItem>
+                  <Link href="/logout" className={`${navigationMenuTriggerStyle()} px-4`}>
+                    Logout
+                  </Link>
+                </NavigationMenuItem>
+              )}
             </>
           ) : (
-            // Logged out navigation items
-            <>
-              <NavigationMenuItem>
-                <Link href="/login" className={`${navigationMenuTriggerStyle()} px-4`}>
-                  Login
-                </Link>
-              </NavigationMenuItem>
-              <NavigationMenuItem>
-                <Link href="/register" className={`${navigationMenuTriggerStyle()} px-4`}>
-                  Register
-                </Link>
-              </NavigationMenuItem>
-            </>
+            // Logged out navigation items (only shown in full mode)
+            !showMinimal && (
+              <>
+                <NavigationMenuItem>
+                  <Link href="/login" className={`${navigationMenuTriggerStyle()} px-4`}>
+                    Login
+                  </Link>
+                </NavigationMenuItem>
+                <NavigationMenuItem>
+                  <Link href="/register" className={`${navigationMenuTriggerStyle()} px-4`}>
+                    Register
+                  </Link>
+                </NavigationMenuItem>
+              </>
+            )
           )}
           <NavigationMenuItem>
             <ModeToggle />
